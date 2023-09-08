@@ -1,0 +1,80 @@
+#ifndef GROUP_H
+#define GROUP_H
+
+#include <ctime>
+#include <vector>
+#include <queue>
+#include <iostream>
+#include <stdlib.h>
+
+#include <boost/json.hpp>
+#include <boost/chrono.hpp>
+
+namespace dp {
+	class BaseGame;
+	namespace server {
+		class Client;
+		class BaseServer;
+	}
+}
+
+namespace dp::server {
+
+typedef struct {
+	
+	Client* client;
+
+	bool ready;
+
+	boost::json::object cfg;
+
+	// TODO: (pensar) en lugar de este idx usar una funcion register_player en la clase BaseGame? que reciba un key string y lo asigne a un player y devuelva el indice asignado?
+	uint64_t idx;
+
+} GroupPlayer;
+
+class Group {
+	
+	static uint64_t count_instances;
+
+	uint64_t id_group;
+
+	BaseServer* server;
+
+	BaseGame* game = nullptr;
+
+	std::unordered_map<std::string, GroupPlayer> players;
+
+	std::queue<boost::json::object> evt_queue;
+
+	boost::asio::io_context *io = nullptr;
+
+	boost::asio::steady_timer *t;
+
+	uint64_t max_players = 2;
+
+	void game_main_loop();
+
+	void process_event(boost::json::object &evt);
+
+public:
+
+	Group(BaseServer* _server);
+
+	uint64_t get_id();
+
+	bool is_full();
+	
+	void new_game();
+
+	void add_client(Client* cl);
+
+	void send_to_all(const std::string& pkg);
+
+	void start_game();
+
+};
+
+} // namespace dp::server
+
+#endif
