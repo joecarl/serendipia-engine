@@ -9,6 +9,7 @@
 
 #include <boost/json.hpp>
 #include <boost/chrono.hpp>
+#include <boost/asio.hpp>
 
 namespace dp {
 	class BaseGame;
