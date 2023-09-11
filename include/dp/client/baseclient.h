@@ -94,6 +94,11 @@ public:
 	void run();
 
 	void set_cfg_param(const std::string& key, const boost::json::value& val);
+	
+	/**
+	 * Obtain a valid writeable directory to save data
+	 */
+	const std::string get_storage_dir();
 
 	TextInput* create_text_input();
 	

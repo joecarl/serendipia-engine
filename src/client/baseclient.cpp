@@ -5,8 +5,10 @@
 #include <allegro5/allegro.h>
 #include <allegro5/allegro_font.h>
 #include <allegro5/allegro_ttf.h>
+#include <allegro5/allegro_primitives.h>
 
 #include <iostream>
+#include <filesystem>
 
 using std::cout;
 using std::endl;
@@ -84,7 +86,7 @@ static void setup_touch_kb(TouchKeys& tk) {
 
 BaseClient::BaseClient(const AppInfo& _app_info, const std::string& res_dir) : 
 	resources_dir(res_dir),
-	custom_cfg_filepath(get_storage_dir() + "/cfg.json"),
+	//custom_cfg_filepath(this->get_storage_dir() + "/cfg.json"),
 	allegro_hnd(this),
 	touch_keys(this),
 	kb_touch_keys(this),
@@ -92,7 +94,8 @@ BaseClient::BaseClient(const AppInfo& _app_info, const std::string& res_dir) :
 	connection(this),
 	app_info(_app_info)
 {
-
+	
+	this->custom_cfg_filepath = this->get_storage_dir() + "/cfg.json";
 	const std::string default_cfg_filepath = res_dir + "/defaultCfg.json";
 	
 	if (file_exists(custom_cfg_filepath)) {
@@ -156,6 +159,23 @@ void BaseClient::set_cfg_param(const std::string& key, const boost::json::value&
 
 	this->cfg[key] = val;
 	file_put_contents(this->custom_cfg_filepath, boost::json::serialize(this->cfg));
+
+}
+
+
+const std::string BaseClient::get_storage_dir() {
+
+#ifdef __ANDROID__
+
+	return "/data/data/" + this->app_info.pkgname + "/files";
+
+#else
+
+	std::string path = "./data"; // TODO: get real writable path
+	std::filesystem::create_directories(path);
+	return path;
+
+#endif
 
 }
 

@@ -59,11 +59,6 @@ std::string trim(std::string s);
 void log(const std::string& txt);
 
 /**
- * Obtain a valid writeable directory to save data
- */ 
-const std::string get_storage_dir();
-
-/**
  * Obtain stringified date
  */ 
 std::string date();

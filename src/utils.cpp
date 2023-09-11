@@ -13,7 +13,6 @@
 #include <algorithm> 
 #include <cctype>
 #include <locale>
-#include <filesystem>
 #include <chrono>
 #include <iomanip>
 
@@ -38,25 +37,6 @@ void log(const string& txt) {
 	
 	cout << txt << endl;
 	
-#endif
-
-}
-
-
-const string get_storage_dir() {
-
-#ifdef __ANDROID__
-
-	return "/data/data/" APP_PKGNAME "/files";
-
-#else
-
-	string path = "./data"; // TODO: get real writable path
-
-	std::filesystem::create_directories(path);
-
-	return path;
-
 #endif
 
 }
