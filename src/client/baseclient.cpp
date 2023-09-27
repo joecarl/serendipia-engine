@@ -94,9 +94,16 @@ BaseClient::BaseClient(const AppInfo& _app_info, const std::string& res_dir) :
 	connection(this),
 	app_info(_app_info)
 {
-	
+
+	cout << "Initializing resources..." << endl;
+	this->allegro_hnd.initialize_resources();
+#ifdef __ANDROID__
+	this->allegro_hnd.extract_assets(res_dir);
+	resources_dir = this->get_storage_dir() + "/" + res_dir;
+#endif
+
 	this->custom_cfg_filepath = this->get_storage_dir() + "/cfg.json";
-	const std::string default_cfg_filepath = res_dir + "/defaultCfg.json";
+	const std::string default_cfg_filepath = resources_dir + "/defaultCfg.json";
 	
 	if (file_exists(custom_cfg_filepath)) {
 
@@ -119,8 +126,6 @@ BaseClient::BaseClient(const AppInfo& _app_info, const std::string& res_dir) :
 	} else {
 
 		this->default_cfg["windowed"] = false;
-		this->default_cfg["serverHostname"] = "copinstar.com";
-		this->default_cfg["serverPort"] = 51009;
 
 	}
 
@@ -133,9 +138,6 @@ BaseClient::BaseClient(const AppInfo& _app_info, const std::string& res_dir) :
 	cout << "CFG: " << this->cfg << endl;
 
 	//this->allegro_hnd = new AllegroHandler(this); 
-	
-	cout << "Initializing resources..." << endl;
-	this->allegro_hnd.initialize_resources();
 
 	cout << "Creating components..." << endl;
 	this->allegro_hnd.create_components();
