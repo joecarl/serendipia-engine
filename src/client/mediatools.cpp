@@ -88,11 +88,10 @@ ALLEGRO_BITMAP* load_bitmap(const std::string& filename) {
 	std::cout << "Loading bitmap: " << filename << std::endl;
 
 	ALLEGRO_BITMAP* sprite = al_load_bitmap(filename.c_str());
-	al_convert_mask_to_alpha(sprite, ALPHA_COLOR);
-
 	if (!sprite) {
 		throw std::runtime_error("error loading bitmap");
 	}
+	al_convert_mask_to_alpha(sprite, ALPHA_COLOR);
 
 	return sprite;
 
