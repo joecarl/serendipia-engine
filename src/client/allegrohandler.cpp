@@ -13,11 +13,30 @@
 #endif
 
 #include <iostream>
+#include <fstream>
 
 using std::cout;
 using std::endl;
 
 namespace dp::client {
+
+static void _mkdir(const char *dir) {
+	char tmp[256];
+	char *p = NULL;
+	size_t len;
+
+	snprintf(tmp, sizeof(tmp),"%s",dir);
+	len = strlen(tmp);
+	if (tmp[len - 1] == '/')
+		tmp[len - 1] = 0;
+	for (p = tmp + 1; *p; p++)
+		if (*p == '/') {
+			*p = 0;
+			mkdir(tmp, S_IRWXU);
+			*p = '/';
+		}
+	mkdir(tmp, S_IRWXU);
+}
 
 AllegroHandler::AllegroHandler(BaseClient *game_engine) :
 	engine(game_engine)
@@ -63,9 +82,38 @@ void AllegroHandler::initialize_resources() {
 	}
 	
 	al_android_set_apk_file_interface();
+	al_android_set_apk_fs_interface();
 	#endif
 
 	cout << "Allegro initialized" << endl;
+
+}
+
+#define BUFFSIZE 1024
+
+static int copy_asset(ALLEGRO_FS_ENTRY *entry, void *cl) {
+	//al_fopen(src)
+	char buff[BUFFSIZE];
+	BaseClient* client = static_cast<BaseClient*>(cl);
+	ALLEGRO_FILE* f = al_open_fs_entry(entry, "r");
+	std::string dst_path = client->get_storage_dir() + "/" + al_get_fs_entry_name(entry);
+	std::string dst_dir = dst_path.substr(0, dst_path.find_last_of('/'));
+	_mkdir(dst_dir.c_str());
+	std::ofstream dst;
+	dst.open(dst_path);
+	while (!al_feof(f)) {
+		size_t bytes = al_fread(f, buff, BUFFSIZE);
+		dst.write(buff, bytes);
+	}
+	dst.close();
+	return dst.good() ? ALLEGRO_FOR_EACH_FS_ENTRY_OK : ALLEGRO_FOR_EACH_FS_ENTRY_ERROR;
+
+}
+
+void AllegroHandler::extract_assets(const std::string& path) {
+	
+	ALLEGRO_FS_ENTRY *dir = al_create_fs_entry(path.c_str());
+	al_for_each_fs_entry(dir, copy_asset, this->engine);
 
 }
 

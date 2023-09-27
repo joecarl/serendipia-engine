@@ -53,6 +53,8 @@ public:
 
 	void initialize_resources();
 
+	void extract_assets(const std::string& path);
+
 	void create_components();
 
 	Point get_mapped_coordinates(int real_x, int real_y);
