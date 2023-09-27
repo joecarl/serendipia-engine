@@ -187,6 +187,7 @@ void TextInput::set_from_json_value(boost::json::value& val) {
 	if (val.is_string()) {
 		this->reset();
 		this->edittext = val.get_string().c_str();
+		this->iter = edittext.begin();
 	}
 
 }
