@@ -47,7 +47,7 @@ void Client::set_udp_channel(UdpChannelController& ch) {
 
 	this->udp_channel = &ch;
 
-	this->udp_channel->process_actions_fn = [this] (boost::json::object obj) {
+	this->udp_channel->process_pkg_fn = [this] (boost::json::object& obj) {
 
 		if (this->on_pkg_received != nullptr) {
 
