@@ -186,7 +186,7 @@ void UdpChannelController::handle_pkg(boost::json::value& json) {
 
 void UdpChannelController::yield_pkgs_buffer() {
 
-	if (this->process_actions_fn == nullptr) {
+	if (this->process_pkg_fn == nullptr) {
 		return;
 	}
 
@@ -202,7 +202,7 @@ void UdpChannelController::yield_pkgs_buffer() {
 
 	//cout << "[] ---> yielding pkg " << next_pkg_to_handle_id;
 	auto obj = boost::json::parse(pkg["data"].as_string()).as_object();
-	this->process_actions_fn(obj);
+	this->process_pkg_fn(obj);
 	this->last_handled_pkg_id = next_pkg_to_handle_id;
 	this->pkgs_buffer.erase(next_pkg_to_handle_id);//, pkg_it + 1);
 	auto rem = this->pkgs_buffer.size();
