@@ -1,5 +1,6 @@
 #include <dp/client/baseclient.h>
 #include <dp/client/mediatools.h>
+#include <dp/client/logging.h>
 #include <dp/utils.h>
 
 #include <allegro5/allegro.h>
@@ -95,11 +96,14 @@ BaseClient::BaseClient(const AppInfo& _app_info, const std::string& res_dir) :
 	app_info(_app_info)
 {
 
+	start_logger(this->app_info.pkgname);
+
 	cout << "Initializing resources..." << endl;
 	this->allegro_hnd.initialize_resources();
 #ifdef __ANDROID__
-	this->allegro_hnd.extract_assets(res_dir);
-	resources_dir = this->get_storage_dir() + "/" + res_dir;
+	// Extract asset files from apk and place then in storage dir
+	this->allegro_hnd.extract_assets(resources_dir);
+	resources_dir = this->get_storage_dir() + "/" + resources_dir;
 #endif
 
 	this->custom_cfg_filepath = this->get_storage_dir() + "/cfg.json";
@@ -137,8 +141,6 @@ BaseClient::BaseClient(const AppInfo& _app_info, const std::string& res_dir) :
 
 	cout << "CFG: " << this->cfg << endl;
 
-	//this->allegro_hnd = new AllegroHandler(this); 
-
 	cout << "Creating components..." << endl;
 	this->allegro_hnd.create_components();
 
@@ -146,13 +148,20 @@ BaseClient::BaseClient(const AppInfo& _app_info, const std::string& res_dir) :
 		keys[i] = false;
 	}
 
-	std::string font_dir = res_dir + "/font.ttf";
-
+	std::string font_dir = resources_dir + "/font.ttf";
 	font = al_load_ttf_font(font_dir.c_str(), scale * 10, ALLEGRO_TTF_MONOCHROME);
-
-	kb_icon = load_bitmap(res_dir + "/keyboard.png");
-
+	kb_icon = load_bitmap_resource("keyboard.png");
+	
 	setup_touch_kb(kb_touch_keys);
+
+}
+
+
+ALLEGRO_BITMAP* BaseClient::load_bitmap_resource(const std::string& filename) {
+
+	std::string path = this->resources_dir + "/" + filename;
+
+	return load_bitmap(path);
 
 }
 

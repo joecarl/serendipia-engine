@@ -104,6 +104,8 @@ public:
 	
 	void set_active_input(TextInput* input);
 
+	ALLEGRO_BITMAP* load_bitmap_resource(const std::string& filename);
+
 	TextInput* get_active_input();
 
 	TouchKeys& get_touch_keys() { return this->touch_keys; }
