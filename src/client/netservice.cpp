@@ -45,18 +45,18 @@ int64_t time_ms() {
 
 void NetService::start_ping_thread() {
 
-	boost::thread([=] {
+	auto cb = [this] (boost::json::object& obj) {
+ 
+		this->ping_ms = time_ms() - obj["ms"].to_number<int64_t>();
+		//std::cout << "PING: " << this->ping_ms << "ms" << endl;
+
+	};
+
+	boost::thread([this, cb] {
 
 		while (true) {
 
-			//cout << "milliseconds since epoch: " << time_ms() << endl;
-
-			boost::json::object pingPkg = {
-				{"type", "ping"},
-				{"ms", time_ms()}
-			};
-
-			this->qsend(boost::json::serialize(pingPkg));
+			this->send_request("net/ping", { {"ms", time_ms()} }, cb);
 			
 			std::this_thread::sleep_for(std::chrono::seconds(1));
 
@@ -75,19 +75,12 @@ void NetService::connect(const string& host, unsigned short port) {
 
 		try {
 
-			// Creating a query.
-			tcp::resolver::query resolver_query(
-				host, 
-				std::to_string(port), 
-				tcp::resolver::query::numeric_service
-			);
-
-			// Creating a resolver.
+			// Create a resolver
 			tcp::resolver resolver(this->io_context);
 
 			// Resolve query
 			cout << "Resolving " << host << " ..." << endl;
-			tcp::resolver::iterator it = resolver.resolve(resolver_query);
+			auto it = resolver.resolve(host, std::to_string(port));
 
 			// resolver.resolve returns an iterator with all resolutions found,
 			// we will just select the first one:
@@ -96,19 +89,14 @@ void NetService::connect(const string& host, unsigned short port) {
 			cout << "Trying " << endpoint << " ..." << endl;
 
 			this->socket.connect(endpoint);
-
 			this->connection_state = CONNECTION_STATE_CONNECTED;
-
 			this->current_host = host;
 
 			cout << "Connected to " << this->socket.remote_endpoint() << " !" << endl;
 
 			this->start_ping_thread();
-
 			this->qread();
-
 			this->send_app_info();
-
 			this->io_context.run();
 
 		} catch (std::exception &e) {
@@ -169,8 +157,11 @@ void NetService::setup_udp(string& local_id) {
 	udp::endpoint remote_endpoint(tcp_remote_ep.address(), tcp_remote_ep.port());
 	this->udp_controller = new UdpController(this->socket.get_executor(), local_endpoint, local_id);
 	this->udp_channel = this->udp_controller->create_channel(remote_endpoint, "SERVER").get();
-
 	this->udp_channel->send_handshake();
+
+	this->udp_channel->process_pkg_fn = [this] (boost::json::object& pkg) {
+		this->handle_json_pkg(pkg);
+	};
 
 	this->connection_state = CONNECTION_STATE_CONNECTED_FULL;
 
@@ -188,15 +179,11 @@ const string& NetService::get_local_id() {
 }
 
 
-void NetService::qsend_udp(const std::string& pkg, const callback_fn_type& _cb) {
+void NetService::qsend_udp(const std::string& pkg) {
 	
 	if (this->udp_channel == nullptr) {
 		cerr << "Cannot send pkg, upd channel not established yet" << endl;
 		return;
-	}
-
-	if (_cb != nullptr) {
-		this->save_cb(pkg, _cb);
 	}
 
 	this->udp_channel->send(pkg);
@@ -205,27 +192,10 @@ void NetService::qsend_udp(const std::string& pkg, const callback_fn_type& _cb) 
 
 }
 
-
-void NetService::save_cb(const std::string& pkg, const callback_fn_type& _cb) {
-
-	boost::json::object obj = boost::json::parse(pkg).get_object();
-
-	//std::string action = obj["action"];
-	std::string action = obj["action"].get_string().c_str();//pt.get<std::string>("action");
-	
-	if (action.length() > 0) {
-		auto t_start = std::chrono::high_resolution_clock::now();
-
-		cbs.push_back({action, _cb, t_start});
-	}
-
-}
-	
-
-void NetService::qsend(std::string pkg, const callback_fn_type& _cb) {
+void NetService::qsend(const std::string& pkg) {
 	
 	if (this->busy) {
-		this->pkg_queue.push({pkg, _cb});
+		this->pkg_queue.push(pkg);
 		return;
 	}
 
@@ -235,30 +205,23 @@ void NetService::qsend(std::string pkg, const callback_fn_type& _cb) {
 							   asio::placeholders::error(),
 							   asio::placeholders::bytes_transferred());
 */
-	pkg += "\r\n\r\n";
+	//pkg += "\r\n\r\n";
+	
+	auto sendbuf = std::make_shared<std::string>(pkg + "\r\n\r\n");
 
-	if (_cb != nullptr) {
-		
-		this->save_cb(pkg, _cb);
-
-	}
-
-	auto handler = [this] (const boost::system::error_code& error, std::size_t bytes_transferred) {
+	auto handler = [this, sendbuf] (const boost::system::error_code& error, std::size_t bytes_transferred) {
 		this->handle_qsent_content(error, bytes_transferred);
+		sendbuf;// TODO: will it be freed?
 	};
 
-	asio::async_write(socket, asio::buffer(pkg), handler);
+	asio::async_write(socket, asio::buffer(*sendbuf), handler);
 	
 	pkgs_sent++;
 
 }
 
 void NetService::qread() {
-/*
-	auto handler = boost::bind(&NetService::handle_qread_content, this,
-							   asio::placeholders::error(),
-							   asio::placeholders::bytes_transferred());
-*/
+
 	auto handler = [this] (const boost::system::error_code& error, std::size_t bytes_transferred) {
 		this->handle_qread_content(error, bytes_transferred);
 	};
@@ -278,28 +241,56 @@ void NetService::handle_qsent_content(const boost::system::error_code& error, st
 	}
 
 	if (!this->pkg_queue.empty()) {
-		this->qsend(this->pkg_queue.front().pkg, this->pkg_queue.front()._cb);
+		this->qsend(this->pkg_queue.front());
 		this->pkg_queue.pop();
 	}
 
 }
 
+void NetService::handle_json_pkg(boost::json::object& obj) {
+	//cout << pkg << endl;
+	/*
+	if (pt["binary_transfer"]) {//as bool
+		this->wait_for_binary = true;
+		this->wait_for_binary_pt = pt;
+	}
+	*/
 
-void NetService::set_process_actions_fn(const callback_fn_type& _fn) {
-	
-	this->process_actions_fn = _fn;
+	if (obj.contains("id")) { // means its a request response
 
-	this->udp_channel->process_actions_fn = _fn;
+		uint64_t id = obj["id"].to_number<uint64_t>();
+		auto cb_it = this->requests_cbs.find(id);
+		if (cb_it != this->requests_cbs.end()) {
+			cb_it->second(obj["data"].as_object());
+		}
 
+	} else if (obj["type"].is_string()) { // means its a normal event
+		//scoped_type
+		string type = obj["type"].get_string().c_str();
+		boost::json::object data = obj["data"].as_object();
+
+		if (type == "set_client_id") {
+			
+			string id = obj["client_id"].as_string().c_str();
+			cout << "SETTING UP UDP. CLIENT ID: " << id << endl;
+			this->setup_udp(id);
+
+		} 
+		
+		for (auto& nelh: this->nelhs) {
+			const auto& listeners = (*nelh).get_listeners(type);
+			for (auto& l: listeners) {
+				l->cb(data);
+			}
+		}
+	}
 }
 
 
 void NetService::handle_qread_content(const boost::system::error_code& error, std::size_t bytes_transferred) {
 
 	if (error) {
-		
 		throw std::runtime_error(error.message());
-
 	}
 
 	std::string data((char*) read_buffer, bytes_transferred);
@@ -311,73 +302,23 @@ void NetService::handle_qread_content(const boost::system::error_code& error, st
 		pkgs_recv ++;
 		//std::cout << " R:" << pkgs_recv << endl;
 
-		boost::json::value pt;
 /*
-		if (this->wait_for_binary) {
-			this->wait_for_binary = false;
-			//pt = this->wait_for_binary_pt;
-			pt["action"] = "binary_transfer";
-			pt["data"] = pkg;
-
-			this->process_actions_fn(pt);
+		if (this->binary_request_response) {
+			uint64_t id = this->binary_request_response;
+			auto cb_it = this->requests_cbs.find(id);
+			if (cb_it != this->requests_cbs.end()) {
+				cb_it->second(pkg);
+			}
+			this->binary_request_response = 0;
 
 		} else {
 */
-			pt = boost::json::parse(pkg);
+			boost::json::value pt = boost::json::parse(pkg);
 
 			if (pt.is_object()) {
 
 				boost::json::object obj = pt.get_object();
-				//cout << pkg << endl;
-				/*
-				if (pt["binary_transfer"]) {//as bool
-					this->wait_for_binary = true;
-					this->wait_for_binary_pt = pt;
-				}
-				*/
-
-				/*
-				boost::json::value resp = obj["response"];
-				if (!resp.is_null()) { //as string
-					std::string response_name = resp.get_string().c_str();//.get<std::string>("response");
-
-					for (std::size_t i = 0; i < cbs.size(); i++) {
-						if (cbs[i].name == response_name) { //si hay dos con el mismo nombre que pasa?
-							cbs[i].cb(obj);
-
-							cbs.erase(cbs.begin() + i);
-							if (cbs.size() > 0) {
-								cout << "CM remaining: " << cbs.size() << endl;
-							}
-
-							break;
-						}
-					}
-
-				}
-				*/
-
-				if (obj["type"].is_string()) {
-
-					if (obj["type"] == "set_client_id") {
-						
-						string id = obj["client_id"].as_string().c_str();
-						cout << "SETTING UP UDP. CLIENT ID: " << id << endl;
-						this->setup_udp(id);
-
-					} else if (obj["type"] == "pong") {
-						
-						this->ping_ms = time_ms() - obj["ms"].to_number<int64_t>();
-						//std::cout << "PING: " << this->ping_ms << "ms" << endl;
-
-					} else if (this->process_actions_fn != nullptr) {
-
-						//std::cout << "ACCION!!!" << std::endl;
-						this->process_actions_fn(obj);
-
-					}
-					
-				}
+				this->handle_json_pkg(obj);
 
 			} else {
 
@@ -389,6 +330,60 @@ void NetService::handle_qread_content(const boost::system::error_code& error, st
 	read_remainder = data;
 	//cout << read_remainder << endl;
 	qread();
+}
+
+void NetService::send_request(const std::string& type, const boost::json::object& data, const CallbackFnType& _cb) {
+
+	uint64_t id = this->next_req_id++;
+	boost::json::object pkg = {
+		{"id", id},
+		{"type", type},
+		{"data", data}
+	};
+
+	this->requests_cbs[id] = _cb;
+
+	this->qsend(boost::json::serialize(pkg));
+
+}
+
+void NetService::send_event(const std::string& type, const boost::json::object& data) {
+	
+	boost::json::object pkg = {
+		{"type", type},
+		{"data", data}
+	};
+
+	this->qsend_udp(boost::json::serialize(pkg));
+
+}
+
+
+NetEventsListenersHandler* NetService::create_nelh() {
+
+	auto nelh = std::make_unique<NetEventsListenersHandler>();
+	auto nelh_ptr = nelh.get();
+	this->nelhs.push_back(std::move(nelh));
+
+	return nelh_ptr;
+
+}
+
+//#include <algorithm>
+bool NetService::remove_nelh(NetEventsListenersHandler* nelh) {
+
+	auto iter = this->nelhs.begin();
+
+	while (iter != this->nelhs.end()) {
+		if (iter->get() == nelh) { 
+			this->nelhs.erase(iter);
+			return true;
+		}
+		iter++;
+	}
+
+	return false;
+
 }
 
 } // namespace dp::client

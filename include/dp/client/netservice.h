@@ -9,6 +9,7 @@
 #define NETSERVICE_H
 
 #include <dp/udpcontroller.h>
+#include <dp/client/neteventslistenershandler.h>
 
 #include <boost/asio.hpp>
 #include <boost/thread.hpp>
@@ -30,19 +31,6 @@ enum ConnState {
 	CONNECTION_STATE_CONNECTED_FULL
 };
 
-typedef std::function<void(boost::json::object& pt)> callback_fn_type;
-
-struct callb {
-	std::string name;
-	callback_fn_type cb;
-	std::chrono::time_point<std::chrono::high_resolution_clock> c_s;
-};
-
-struct qsend_item {
-	std::string pkg;
-	callback_fn_type _cb;
-};
-
 /**
  * Handles the connection with the server. Enables TCP and UDP communication
  */
@@ -50,11 +38,13 @@ class NetService {
 
 	BaseClient* client;
 
-	int pkgs_sent = 0, pkgs_recv = 0;
+	uint64_t pkgs_sent = 0;
 
-	std::queue<qsend_item> pkg_queue;
-	
-	std::vector<callb> cbs;
+	uint64_t pkgs_recv = 0;
+
+	uint64_t next_req_id = 1;
+
+	std::queue<std::string> pkg_queue;
 
 	boost::asio::io_context io_context;
 	
@@ -80,6 +70,8 @@ class NetService {
 
 	boost::json::object wait_for_binary_pt;
 
+	std::unordered_map<uint64_t, CallbackFnType> requests_cbs;
+
 	void send_app_info();
 
 	void setup_udp(std::string& local_id);
@@ -89,16 +81,16 @@ class NetService {
 	void handle_qsent_content(const boost::system::error_code& error, std::size_t bytes_transferred);
 
 	void handle_qread_content(const boost::system::error_code& error, std::size_t bytes_transferred);
-
-	void save_cb(const std::string& pkg, const callback_fn_type& _cb);
+	
+	void handle_json_pkg(boost::json::object& obj);
 	
 	void qread();
-
-	callback_fn_type process_actions_fn;
 
 	int64_t ping_ms = 0;
 
 	std::string current_host;
+
+	std::vector<std::unique_ptr<NetEventsListenersHandler>> nelhs;
 
 public:
 
@@ -115,6 +107,8 @@ public:
 	 * be received and stored, a UDP channel will be created and when it is 
 	 * fully established the state will change to 
 	 * `CONNECTION_STATE_CONNECTED_FULL`.
+	 * @param addr the endpoint address
+	 * @param port the endpoint port
 	 */
 	void connect(const std::string& addr, unsigned short port);
 
@@ -124,14 +118,30 @@ public:
 	ConnState get_state();
 
 	/**
-	 * Sends data via TCP socket.
+	 * Sends a request which should be responded. Will always be sent via TCP
+	 * @param type a scoped type in the format <scope>/<type>
+	 * @param data random json object
+	 * @param _cb the callback function which will be executed when the 
+	 * response arrives
 	 */
-	void qsend(std::string pkg, const callback_fn_type& _cb = nullptr);
+	void send_request(const std::string& type, const boost::json::object& data = {}, const CallbackFnType& _cb = nullptr);
 
 	/**
-	 * Sends data via UDP socket.
+	 * Sends an event which won't receive any response. Will be sent via UDP
+	 * @param type a scoped type in the format `<scope>/<type>`
+	 * @param data random json object
 	 */
-	void qsend_udp(const std::string& pkg, const callback_fn_type& _cb = nullptr);
+	void send_event(const std::string& type, const boost::json::object& data = {});
+
+	/**
+	 * Sends raw data via TCP socket.
+	 */
+	void qsend(const std::string& pkg);
+
+	/**
+	 * Sends raw data via UDP socket.
+	 */
+	void qsend_udp(const std::string& pkg);
 
 	/**
 	 * Retrieves the local id provided by the server. This function should not
@@ -140,10 +150,6 @@ public:
 	 */
 	const std::string& get_local_id();
 
-	/**
-	 * Sets the application level callback used to process custom packages.
-	 */
-	void set_process_actions_fn(const callback_fn_type& _fn);
 
 	/**
 	 * Obtains the last host that the client connected to.
@@ -154,6 +160,10 @@ public:
 	 * Obtains the current ping in milliseconds.
 	 */
 	int64_t get_ping_ms() { return this->ping_ms; }
+
+	NetEventsListenersHandler* create_nelh();
+
+	bool remove_nelh(NetEventsListenersHandler* nelh);
 
 };
 
