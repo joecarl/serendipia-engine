@@ -3,7 +3,7 @@
 
 #include <dp/serendipia.h>
 #include <dp/client/netgroup.h>
-#include <dp/client/neteventslistenershandler.h>
+#include <dp/neteventslistenershandler.h>
 #include <boost/json.hpp>
 #include <map>
 #include <memory>

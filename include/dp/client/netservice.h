@@ -9,7 +9,7 @@
 #define NETSERVICE_H
 
 #include <dp/udpcontroller.h>
-#include <dp/client/neteventslistenershandler.h>
+#include <dp/neteventslistenershandler.h>
 
 #include <boost/asio.hpp>
 #include <boost/thread.hpp>

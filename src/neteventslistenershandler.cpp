@@ -1,6 +1,6 @@
 
 #include <dp/serendipia.h>
-#include <dp/client/neteventslistenershandler.h>
+#include <dp/neteventslistenershandler.h>
 #include <boost/json.hpp>
 #include <unordered_map>
 #include <memory>
