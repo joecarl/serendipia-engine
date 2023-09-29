@@ -3,6 +3,7 @@
 
 #include <dp/serendipia.h>
 #include <dp/client/netservice.h>
+#include <dp/client/netgroupshandler.h>
 #include <dp/client/allegrohandler.h>
 #include <dp/client/stage.h>
 #include <dp/client/ui/touchkeys.h>
@@ -44,6 +45,8 @@ class BaseClient {
 	TextInput* active_input = nullptr;
 
 	NetService connection;
+
+	NetGroupsHandler groups_handler;
 
 	ALLEGRO_FONT* font;
 
@@ -127,6 +130,8 @@ public:
 	uint16_t get_res_y() { return this->res_y; }
 
 	ALLEGRO_FONT* get_font() { return this->font; }
+
+	NetGroupsHandler& get_groups_handler() { return this->groups_handler; }
 
 	bool get_key(uint16_t kcode) { return kcode < ALLEGRO_KEY_MAX ? this->keys[kcode]: false; }
 

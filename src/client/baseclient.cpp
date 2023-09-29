@@ -93,6 +93,7 @@ BaseClient::BaseClient(const AppInfo& _app_info, const std::string& res_dir) :
 	kb_touch_keys(this),
 	active_touch_keys(&touch_keys),
 	connection(this),
+	groups_handler(this),
 	app_info(_app_info)
 {
 
