@@ -10,7 +10,7 @@ namespace dp::client {
 	class BaseClient;
 }
 
-namespace dp::client {
+namespace dp {
 
 typedef std::function<void(boost::json::object& pt)> CallbackFnType;
 
@@ -48,6 +48,6 @@ public:
 
 };
 
-} // namespace dp::client
+} // namespace dp
 
 #endif

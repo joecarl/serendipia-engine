@@ -9,7 +9,7 @@ namespace dp::client {
 	class BaseClient;
 }
 
-namespace dp::client {
+namespace dp {
 
 	
 NetEventsListenersHandler::NetEventsListenersHandler() {
@@ -53,4 +53,4 @@ std::vector<const NetEventListener*> NetEventsListenersHandler::get_listeners(co
 
 }
 
-}
+} // namespace dp
