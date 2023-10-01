@@ -2,6 +2,7 @@
 #define UTILS_H
 
 #include <string>
+#include <vector>
 
 namespace dp {
 
@@ -26,7 +27,7 @@ bool file_put_contents(const std::string& filepath, const std::string& contents)
  * found. Returns an empty string otherwise. The returned value is erased from 
  * the input variable
  */ 
-std::string extract_pkg(std::string& buffer);
+std::string extract_pkg(std::vector<uint8_t>& buffer);
 
 /**
  * Determines wether a file exists or not
@@ -62,6 +63,11 @@ void log(const std::string& txt);
  * Obtain stringified date
  */ 
 std::string date();
+
+/**
+ * Returns the number of milleseconds since EPOCH
+ */
+int64_t time_ms();
 
 } // namespace dp
 

@@ -71,15 +71,19 @@ const string& get_wait_string() {
 }
 
 
-string extract_pkg(string& buffer) {
+std::vector<uint8_t> terminator = {'\r', '\n', '\r', '\n'};
+std::string extract_pkg(std::vector<uint8_t>& buffer) {
 	
-	string pkg = "";
+	std::string pkg = "";
 
-	auto pos = buffer.find("\r\n\r\n");
+	auto pos = std::search(
+		buffer.begin(), buffer.end(), 
+		terminator.begin(), terminator.end()
+	);
 
-	if (pos != string::npos) {
-		pkg = buffer.substr(0, pos);
-		buffer.erase(0, pos + 4);
+	if (pos != buffer.end()) {
+		pkg.insert(pkg.end(), buffer.begin(), pos);
+		buffer.erase(buffer.begin(), pos + 4);
 	}
 
 	return pkg;
@@ -173,6 +177,21 @@ string trim(string s) {
 	s = rtrim(s);
 
 	return s;
+
+}
+
+
+int64_t time_ms() {
+	
+	/*
+	auto now = std::chrono::system_clock::now();
+	auto now_ms = std::chrono::time_point_cast<std::chrono::milliseconds>(now);
+	return now_ms.time_since_epoch().count()
+	*/
+
+	return std::chrono::duration_cast<std::chrono::milliseconds>(
+		std::chrono::system_clock::now().time_since_epoch()
+	).count();
 
 }
 
