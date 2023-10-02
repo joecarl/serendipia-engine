@@ -89,6 +89,8 @@ void UdpController::start_receive() {
 			cerr << "RECV_DATA: " << dgram << endl;
 		}
 
+		delete[] recv_buff;
+
 		this->start_receive();
 
 	};
