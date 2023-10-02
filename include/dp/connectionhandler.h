@@ -1,12 +1,5 @@
-//
-//  netservice.h
-//  dp
-//
-//  Created by Joe on 13/9/18.
-//
-
-#ifndef NETSERVICE_H
-#define NETSERVICE_H
+#ifndef CONNECTIONHANDLER_H
+#define CONNECTIONHANDLER_H
 
 #include <dp/udpcontroller.h>
 #include <dp/neteventslistenershandler.h>
@@ -18,11 +11,15 @@
 #include <chrono>
 #include <queue>
 
-namespace dp::client {
-	class BaseClient;
-}
+#define MAX_BUFFER_SIZE (32 * 1024)
 
-namespace dp::client {
+namespace dp {
+
+typedef struct {
+	uint64_t id;
+	std::string type;
+	boost::json::object data;
+} NetPackage;
 
 enum ConnState {
 	CONNECTION_STATE_DISCONNECTED = 0,
@@ -34,9 +31,7 @@ enum ConnState {
 /**
  * Handles the connection with the server. Enables TCP and UDP communication
  */
-class NetService {
-
-	BaseClient* client;
+class ConnectionHandler {
 
 	uint64_t pkgs_sent = 0;
 
@@ -46,71 +41,76 @@ class NetService {
 
 	std::queue<std::string> pkg_queue;
 
-	boost::asio::io_context io_context;
-	
-	boost::asio::ip::tcp::socket socket;
-
-	UdpController* udp_controller;
+	std::string pending_data = "";
 
 	UdpChannelController* udp_channel;
 
 	bool busy = false;
 
-	ConnState connection_state = CONNECTION_STATE_DISCONNECTED;
+	uint8_t read_buffer[MAX_BUFFER_SIZE];
 
-	int id_client = 0;
+	std::vector<uint8_t> stream_buffer;
 
-	unsigned int pkg_id = 0;
+	std::vector<uint8_t> binary_data;
 
-	unsigned char read_buffer[1024];
-
-	std::string read_remainder = "";
-
-	bool wait_for_binary = false;
-
-	boost::json::object wait_for_binary_pt;
+	uint64_t binary_pending_bytes = 0;
 
 	std::unordered_map<uint64_t, CallbackFnType> requests_cbs;
 
-	void send_app_info();
+	int64_t ping_ms = 0;
 
-	void setup_udp(std::string& local_id);
+	std::vector<std::unique_ptr<NetEventsListenersHandler>> nelhs;
 
-	void start_ping_thread();
+	bool receiving = false;
 
 	void handle_qsent_content(const boost::system::error_code& error, std::size_t bytes_transferred);
 
 	void handle_qread_content(const boost::system::error_code& error, std::size_t bytes_transferred);
 	
 	void handle_json_pkg(boost::json::object& obj);
+
+	void process_request(NetPackage& req);
 	
 	void qread();
 
-	int64_t ping_ms = 0;
+	void _send(const std::string& pkg);
 
-	std::string current_host;
+protected:
 
-	std::vector<std::unique_ptr<NetEventsListenersHandler>> nelhs;
+	virtual void send_app_info() { }
+
+	virtual bool validate_app_info(boost::json::object& data) { return true; }
+	
+	virtual bool preprocess_pkg(NetPackage& req) { return true; }
+
+	std::string id;
+
+	// this context should not be used when the connection handler is initializad with another socket
+	boost::asio::io_context io_context;
+
+	boost::asio::ip::tcp::socket socket;
+
+	ConnState connection_state = CONNECTION_STATE_DISCONNECTED;
+
+	void start_ping_thread();
 
 public:
 
-	NetService(BaseClient* client);
-
-	~NetService();
+	static std::string pkg_to_raw_data(const NetPackage& pkg);
 
 	/**
-	 * Connects to the specified address and port, the function always returns
-	 * immediately and the state will change to `CONNECTION_STATE_CONNECTING`.
-	 * If the process is successful the state will eventually change to 
-	 * `CONNECTION_STATE_CONNECTED`. At this point TCP communication is 
-	 * available and calling `qsend` should work. After this, a local id will
-	 * be received and stored, a UDP channel will be created and when it is 
-	 * fully established the state will change to 
-	 * `CONNECTION_STATE_CONNECTED_FULL`.
-	 * @param addr the endpoint address
-	 * @param port the endpoint port
+	 * Constructs the instance in client mode
 	 */
-	void connect(const std::string& addr, unsigned short port);
+	ConnectionHandler(/*boost::asio::io_context& io_context*/);
+
+	/**
+	 * Constructs the instance in server mode
+	 */
+	ConnectionHandler(boost::asio::ip::tcp::socket&& _socket);
+
+	~ConnectionHandler();
+	
+	void set_udp_channel(UdpChannelController* ch);
 
 	/**
 	 * Obtains the connection state.
@@ -144,17 +144,9 @@ public:
 	void qsend_udp(const std::string& pkg);
 
 	/**
-	 * Retrieves the local id provided by the server. This function should not
-	 * be called before the connection state reaches 
-	 * `CONNECTION_STATE_CONNECTED_FULL`.
+	 * Starts reading and processing incoming data
 	 */
-	const std::string& get_local_id();
-
-
-	/**
-	 * Obtains the last host that the client connected to.
-	 */
-	std::string& get_current_host() { return this->current_host; }
+	void start_receive();
 
 	/**
 	 * Obtains the current ping in milliseconds.
@@ -164,6 +156,10 @@ public:
 	NetEventsListenersHandler* create_nelh();
 
 	bool remove_nelh(NetEventsListenersHandler* nelh);
+
+	bool is_connected() { return this->connection_state >= CONNECTION_STATE_CONNECTED; }
+
+	std::string get_id() { return this->id; }
 
 };
 

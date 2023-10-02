@@ -37,7 +37,7 @@ BaseServer::BaseServer(const AppInfo& _app_info, uint16_t _port):
 		}
 		
 		auto cl = this->clients[ch_id];
-		cl->set_udp_channel(ch);
+		cl->set_udp_channel(&ch);
 		
 	};
 
@@ -46,6 +46,7 @@ BaseServer::BaseServer(const AppInfo& _app_info, uint16_t _port):
 
 void BaseServer::remove_client(const std::string& idx) {
 
+	cout << "Removig client" << idx << endl;
 	delete clients[idx];
 	//clients[idx] = nullptr;
 	clients.erase(idx);
@@ -75,13 +76,11 @@ void BaseServer::on_new_connection(tcp::socket& socket) {
 	if (clients.size() < this->max_connections) {
 
 		auto cl = new Client(this, std::move(socket));
-		const std::string id = "C" + std::to_string(cl->get_id());
+		const std::string id = cl->get_id();
 		clients[id] = cl;
 		
 		std::cout << "Client " << id << " connected!" << std::endl;
 
-		// TODO: add groups dynamically
-		//group.add_client(cl);
 		Group* gr_ptr = nullptr;
 		for (auto& gr: this->groups) {
 			if (gr.second->is_full()) {
@@ -97,7 +96,7 @@ void BaseServer::on_new_connection(tcp::socket& socket) {
 		}
 		gr_ptr->add_client(cl);
 		
-		cl->async_wait_for_data();
+		cl->start_receive();
 
 		assigned = true;
 
@@ -115,7 +114,7 @@ void BaseServer::remove_dead_connections() {
 	std::vector<std::string> to_remove;
 	for (auto& cl: this->clients) {
 
-		if (cl.second != nullptr && cl.second->is_dead()) {
+		if (cl.second != nullptr && cl.second->get_state() == CONNECTION_STATE_DISCONNECTED) {
 			to_remove.push_back(cl.first);
 		}
 	}

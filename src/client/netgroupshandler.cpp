@@ -26,6 +26,13 @@ NetGroupsHandler::NetGroupsHandler(BaseClient* _client) :
 }
 
 
+void NetGroupsHandler::create_group(dp::client::Connection* net, std::string id, std::string owner_id, boost::json::array& members) {
+	
+	this->group = std::make_unique<NetGroup>(this->net, id, owner_id, members);
+
+}
+
+
 void NetGroupsHandler::setup_nelh() {
 
 	nelh->add_event_listener("groups/join", [this] (object& data) {
@@ -35,8 +42,7 @@ void NetGroupsHandler::setup_nelh() {
 		std::string id = g["id"].as_string().c_str();
 		std::string owner_id = g["owner_id"].as_string().c_str();
 		boost::json::array members = g["members"].as_array();
-		
-		this->group = std::make_unique<NetGroup>(this->net, id, owner_id, members);
+		this->create_group(this->net, id, owner_id, members);
 
 	});
 

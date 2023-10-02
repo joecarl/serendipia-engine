@@ -7,7 +7,7 @@
 #include <unordered_map>
 
 namespace dp::client {
-	class NetService;
+	class Connection;
 }
 
 namespace dp::client {
@@ -25,10 +25,11 @@ typedef struct {
 
 class NetGroup {
 
+protected:
 	/**
 	 * The net service used to receive the group information
 	 */
-	NetService* net;
+	Connection* net;
 
 	/**
 	 * The handler which will allow us to create event listeners 
@@ -54,7 +55,7 @@ class NetGroup {
 
 public:
 
-	NetGroup(NetService* net, std::string id, std::string owner_id, boost::json::array members);
+	NetGroup(Connection* net, std::string id, std::string owner_id, boost::json::array& members);
 
 	~NetGroup();
 
@@ -65,12 +66,14 @@ public:
 	const GroupMember& get_owner();
 
 	/** 
-	 * Handles the event emmited by the server which will update the group
-	 * internal data.
+	 * Creates the events handlers for the events emmited by the server which 
+	 * will update the group internal data.
 	 */
-	void process_group_event(boost::json::object& evt);
+	void set_group_listeners();
 
 	void send_ready_state(bool ready_state);
+
+	NetEventsListenersHandler* get_nelh() { return this->nelh; }
 
 };
 

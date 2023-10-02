@@ -3,6 +3,8 @@
 #define CLIENTS_H
 
 #include <dp/udpcontroller.h>
+#include <dp/connectionhandler.h>
+#include <dp/neteventslistenershandler.h>
 #include <boost/json.hpp>
 #include <boost/asio.hpp>
 #include <boost/thread.hpp>
@@ -20,67 +22,30 @@ struct EventListener {
 	std::function<void()> cb;
 };
 
-class Client {
+
+
+
+class Client : public ConnectionHandler {
 
 	static uint64_t count_instances;
 
 	BaseServer* server;
 
-	uint64_t pkgs_recv = 0;
-
-	uint64_t pkgs_sent = 0;
-
-	uint64_t id_client = 0;
-
-	bool busy = false;
-
-	bool dead = false;
-	
 	bool app_validated = false;
 
-	UdpChannelController* udp_channel;
+	bool validate_app_info(boost::json::object& data);
 
-	boost::asio::ip::tcp::socket socket;
+	bool preprocess_pkg(NetPackage& pkg);
 
-	std::vector<EventListener> evt_listeners;
-	
-	std::queue<std::string> pkg_queue;
-
-	std::string pending_data = "";
-
-	unsigned char read_buffer[1024];
-
-	std::string read_remainder = "";
-
-	void handle_read_content(const boost::system::error_code& error, std::size_t bytes_transferred);
-
-	void handle_qsent_content(const boost::system::error_code& error, std::size_t bytes_transferred);
+	NetEventsListenersHandler* nelh;
 
 public:
 
 	Client(BaseServer* _server, boost::asio::ip::tcp::socket&& _socket);
 	
-	~Client();
-	
-	uint64_t get_id();
+	//~Client();
 
-	void set_udp_channel(UdpChannelController& ch);
-
-	void async_wait_for_data();
-
-	void add_event_listener(const std::string& evt_name, const std::function<void()> &fn);
-	
-	void trigger_event(const std::string& evt_name);
-	
-	void qsend(std::string pkg, bool ignore_busy = false);
-	
-	void qsend_udp(const std::string& pkg);
-
-	bool is_dead();
-
-	void process_request(const std::string& request);
-	
-	std::function<void(boost::json::object& pt)> on_pkg_received;
+	NetEventsListenersHandler* get_nelh() { return this->nelh; }
 
 };
 

@@ -38,7 +38,7 @@ void Group::add_client(Client* cl) {
 		}
 	}
 
-	std::string player_idx = "C" + std::to_string(cl->get_id());
+	std::string player_idx = cl->get_id();
 
 	GroupPlayer pl = {
 		.client = cl,
@@ -49,7 +49,9 @@ void Group::add_client(Client* cl) {
 	this->players[player_idx] = pl;
 	cout << "Client " << player_idx << " joined group " << this->get_id() << endl;
 
-	cl->add_event_listener("onDrop", [this, player_idx] () {
+	auto nelh = cl->get_nelh();
+
+	nelh->add_event_listener("connection/drop", [this, player_idx] (boost::json::object& data) {
 
 		//cout << "onDrop event callback!!" << endl;
 		this->players.erase(player_idx);
@@ -57,74 +59,73 @@ void Group::add_client(Client* cl) {
 		
 	});
 
-	
-	cl->on_pkg_received = [this, player_idx] (boost::json::object& pkg) {
+	nelh->add_event_listener("group/clientConfig", [this, player_idx] (boost::json::object& data) {
 
-		auto evt_type = pkg["type"].as_string();
-	
-		if (evt_type == "clientConfig") {//if scope == group-event
+		cout << "Client config: " << data << endl;
+		// en este pkg data hay mucha info innecesaria, quiza se deberia 
+		// construir un objecto unevo con lo estrictamente necesario
+		auto player_cfg = data;
+		player_cfg["clientId"] = player_idx;
+		this->players[player_idx].cfg = player_cfg;
+		//set
+	});
 
-			cout << "Client config: " << pkg["data"] << endl;
-			// en este pkg data hay mucha info innecesaria, quiza se deberia 
-			// construir un objecto unevo con lo estrictamente necesario
-			auto player_cfg = pkg["data"].as_object();
-			player_cfg["clientId"] = player_idx;
-			this->players[player_idx].cfg = player_cfg;
-			//set
+	nelh->add_event_listener("group/ready_to_play", [this, player_idx] (boost::json::object& data) {
 
-		} else if (evt_type == "ready_to_play") {//if scope == group-event
+		cout << "Player ready!!" << endl;
+		this->players[player_idx].ready = true;
 
-			cout << "Player ready!!" << endl;
-			this->players[player_idx].ready = true;
-
-			if (!this->is_full()) {
-				return;
-			}
-			bool all_players_ready = true;
-			for (auto& pl: this->players) {
-				if (!pl.second.ready) {
-					all_players_ready = false;
-					break;
-				}
-			}
-			if (all_players_ready) {
-				this->start_game();
-			}
-
-		} else if (evt_type == "desync") {
-
-			boost::json::object o = {
-				{"type", "sync"},
-				{"gamevars", this->server->export_game(this->game)}
-			};
-
-			cerr << "!! RESYNC " << o << endl;
-			this->players[player_idx].client->qsend_udp(boost::json::serialize(o));
-
-		} else {
-
-		//if (evt_type == "set_control_state") {//if scope == game-event
-			//cout << pkg << endl;
-
-			uint64_t orig_tick = pkg["tick"].to_number<uint64_t>();
-			uint64_t tick_diff = 0;
-
-			if (orig_tick < this->game->tick) {
-				tick_diff = this->game->tick - orig_tick;
-				cout << "Tick diff: " << tick_diff << endl;
-			}
-
-			cout << "TICK: " << this->game->tick << " | IDX: " << this->players[player_idx].idx << endl;
-			pkg["player_key"] = this->players[player_idx].idx; //player_idx;
-			pkg["tick"] = this->game->tick + 0; //TODO: auto calc tick delay based on clients connection?
-
-			this->evt_queue.push(pkg);
-
-			this->send_to_all(boost::json::serialize(pkg));
-		//}
+		if (!this->is_full()) {
+			return;
 		}
+		bool all_players_ready = true;
+		for (auto& pl: this->players) {
+			if (!pl.second.ready) {
+				all_players_ready = false;
+				break;
+			}
+		}
+		if (all_players_ready) {
+			this->start_game();
+		}
+
+	});
+
+	nelh->add_event_listener("game/desync", [this, player_idx] (boost::json::object& data) {
+
+		boost::json::object o = {
+			{"type", "sync"},
+			{"gamevars", this->server->export_game(this->game)}
+		};
+
+		cerr << "!! RESYNC " << o << endl;
+		this->players[player_idx].client->qsend_udp(boost::json::serialize(o));
+
+	});
+
+	nelh->add_event_listener("game/event", [this, player_idx] (boost::json::object& data) {
 	
-	};
+		uint64_t orig_tick = data["tick"].to_number<uint64_t>();
+		uint64_t tick_diff = 0; 
+
+		if (orig_tick < this->game->tick) {
+			tick_diff = this->game->tick - orig_tick;
+			cout << "Tick diff: " << tick_diff << endl;
+		}
+
+		cout << "TICK: " << this->game->tick << " | IDX: " << this->players[player_idx].idx << endl;
+		data["player_key"] = this->players[player_idx].idx; //player_idx;
+		data["tick"] = this->game->tick + 0; //TODO: auto calc tick delay based on clients connection?
+
+		this->evt_queue.push(data);
+
+		const std::string raw_data = ConnectionHandler::pkg_to_raw_data({
+			.type = "game/event",
+			.data = data,
+		});
+		this->send_to_all(raw_data);
+	
+	});
 
 }
 
@@ -187,7 +188,7 @@ void Group::send_to_all(const std::string& pkg) {
 
 	for (auto& pl : this->players) {
 		auto cl = pl.second.client;
-		if (cl != nullptr && !cl->is_dead()) {
+		if (cl != nullptr && cl->is_connected()) {
 			//if (cl->logged || 1) {
 				cl->qsend_udp(pkg);
 			//}

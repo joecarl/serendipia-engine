@@ -31,15 +31,9 @@ class NetGroupsHandler {
 	 */
 	std::map<std::string, GroupInfo> groups;
 
-	/**
-	 * The current group where the client belongs. If the client never joined
-	 * any group or leaved the group this value should be nullptr
-	 */
-	std::unique_ptr<NetGroup> group = nullptr;
-
 	BaseClient* client;
 
-	NetService* net;
+	Connection* net;
 
 	NetEventsListenersHandler* nelh;
 	
@@ -47,6 +41,16 @@ class NetGroupsHandler {
 	 * Creates the event handlers for the events scoped with `groups`
 	 */
 	void setup_nelh();
+
+protected:
+
+	/**
+	 * The current group where the client belongs. If the client never joined
+	 * any group or left the group, this value should be nullptr
+	 */
+	std::unique_ptr<NetGroup> group = nullptr;
+
+	virtual void create_group(dp::client::Connection* net, std::string id, std::string owner_id, boost::json::array& members);	
 
 public:
 
@@ -58,6 +62,8 @@ public:
 	void join_group(const std::string& id);
 
 	NetGroup* get_current_group() { return this->group.get(); }
+
+	BaseClient* get_client() { return this->client; }
 
 };
 

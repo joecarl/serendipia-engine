@@ -1,5 +1,5 @@
 #include <dp/client/netgroup.h>
-#include <dp/client/netservice.h>
+#include <dp/client/connection.h>
 #include <stdexcept>
 
 using boost::json::object;
@@ -21,17 +21,20 @@ static GroupMember update_group_member(object m) {
 */
 
 
-NetGroup::NetGroup(NetService* _net, string _id, string _owner_id, boost::json::array members) :
+NetGroup::NetGroup(Connection* _net, string _id, string _owner_id, boost::json::array& _members) :
 	net(_net),
 	nelh(net->create_nelh()),
 	id(_id),
 	owner_id(_owner_id)
 { 
-	for (auto& _m: members) {
+	for (auto& _m: _members) {
 		object m = _m.as_object();
 		string client_id = m["client_id"].as_string().c_str();
 		this->members[client_id] = parse_group_member(m);
 	}
+
+	this->set_group_listeners();
+
 }
 
 NetGroup::~NetGroup() {
@@ -48,7 +51,7 @@ const GroupMember& NetGroup::get_owner() {
 	return iter->second; 
 }
 
-void NetGroup::process_group_event(object& evt) {
+void NetGroup::set_group_listeners() {
 
 	this->nelh->add_event_listener("group/member_join", [this] (object& data) {
 		object m = data["member"].as_object();

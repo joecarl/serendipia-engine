@@ -2,7 +2,7 @@
 #define BASECLIENT_H
 
 #include <dp/serendipia.h>
-#include <dp/client/netservice.h>
+#include <dp/client/connection.h>
 #include <dp/client/netgroupshandler.h>
 #include <dp/client/allegrohandler.h>
 #include <dp/client/stage.h>
@@ -44,9 +44,9 @@ class BaseClient {
 
 	TextInput* active_input = nullptr;
 
-	NetService connection;
+	Connection connection;
 
-	NetGroupsHandler groups_handler;
+	//NetGroupsHandler groups_handler;
 
 	ALLEGRO_FONT* font;
 
@@ -113,7 +113,7 @@ public:
 
 	TouchKeys& get_touch_keys() { return this->touch_keys; }
 
-	NetService& get_io_client() { return this->connection; }
+	Connection& get_io_client() { return this->connection; }
 
 	boost::json::object& get_cfg() { return this->cfg; }
 
@@ -131,7 +131,7 @@ public:
 
 	ALLEGRO_FONT* get_font() { return this->font; }
 
-	NetGroupsHandler& get_groups_handler() { return this->groups_handler; }
+	//NetGroupsHandler& get_groups_handler() { return this->groups_handler; }
 
 	bool get_key(uint16_t kcode) { return kcode < ALLEGRO_KEY_MAX ? this->keys[kcode]: false; }
 
