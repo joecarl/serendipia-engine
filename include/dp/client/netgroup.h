@@ -75,6 +75,8 @@ public:
 
 	NetEventsListenersHandler* get_nelh() { return this->nelh; }
 
+	const GroupMember* get_member_info(std::string id);
+
 };
 
 } // namespace dp::client

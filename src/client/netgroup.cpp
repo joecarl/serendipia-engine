@@ -84,5 +84,12 @@ void NetGroup::send_ready_state(bool ready_state) {
 
 }
 
+const GroupMember* NetGroup::get_member_info(std::string id) {
+	auto iter = this->members.find(id);
+	if (iter == this->members.end()) {
+		return nullptr;
+	}
+	return &(iter->second);
+}
 
 } // namespace dp::client
