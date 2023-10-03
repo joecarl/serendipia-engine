@@ -75,7 +75,7 @@ public:
 
 	NetEventsListenersHandler* get_nelh() { return this->nelh; }
 
-	const GroupMember* get_member_info(std::string id);
+	const GroupMember* get_member_info(const std::string& id);
 
 };
 

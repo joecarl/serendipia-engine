@@ -66,7 +66,6 @@ void NetGroup::set_group_listeners() {
 	});
 
 	this->nelh->add_event_listener("group/member_update", [this] (object& data) {
-
 		object m = data["member"].as_object();
 		string client_id = m["client_id"].as_string().c_str();
 		auto iter = this->members.find(client_id);
@@ -84,7 +83,7 @@ void NetGroup::send_ready_state(bool ready_state) {
 
 }
 
-const GroupMember* NetGroup::get_member_info(std::string id) {
+const GroupMember* NetGroup::get_member_info(const std::string& id) {
 	auto iter = this->members.find(id);
 	if (iter == this->members.end()) {
 		return nullptr;
