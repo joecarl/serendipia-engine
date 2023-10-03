@@ -8,8 +8,10 @@
 #define ALPHA_COLOR al_map_rgb(255, 0, 255)
 
 #define WHITE al_map_rgb(255, 255, 255)
-
 #define RED al_map_rgb(255, 0, 0)
+
+#define CGA_PINK al_map_rgb(255, 85, 255)
+#define CGA_BLUE al_map_rgb(85, 255, 255)
 
 
 const int Do = 1, DoSos = 2, Re = 3, ReSos = 4, Mi = 5, Fa = 6, FaSos = 7,
