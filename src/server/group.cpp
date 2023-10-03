@@ -116,10 +116,7 @@ void Group::add_client(Client* cl) {
 		};
 
 		cerr << "!! RESYNC " << o << endl;
-		this->players[player_idx].client->send_event(ConnectionHandler::pkg_to_raw_data({
-			.type = "game/event",
-			.data = o
-		}));
+		this->players[player_idx].client->send_event("game/event", o);
 
 	});
 
