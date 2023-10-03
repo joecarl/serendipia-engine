@@ -2,6 +2,7 @@
 
 #ifdef __ANDROID__
 #include <android/log.h>
+#include <unistd.h>
 
 // https://codelab.wordpress.com/2014/11/03/how-to-use-standard-output-streams-for-logging-in-android-apps/
 

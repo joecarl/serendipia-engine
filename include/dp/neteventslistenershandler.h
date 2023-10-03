@@ -5,6 +5,7 @@
 #include <boost/json.hpp>
 #include <unordered_map>
 #include <memory>
+#include <vector>
 
 namespace dp::client {
 	class BaseClient;
