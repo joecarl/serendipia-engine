@@ -137,7 +137,7 @@ void ConnectionHandler::_send(const std::string& pkg) {
 
 	auto handler = [this, sendbuf] (const boost::system::error_code& error, std::size_t bytes_transferred) {
 		this->handle_qsent_content(error, bytes_transferred);
-		cerr << "SENT: " << *sendbuf << endl;
+		//cerr << "SENT: " << *sendbuf << endl;
 		sendbuf->clear();// TODO: will it be freed?
 	};
 
@@ -305,7 +305,7 @@ void ConnectionHandler::handle_qread_content(const boost::system::error_code& er
 
 	while ((pkg = extract_pkg(stream_buffer)) != "") {
 
-		cout << "EXTRACTED PKG: " << pkg << endl;
+		//cout << "EXTRACTED PKG: " << pkg << endl;
 		
 		pkgs_recv ++;
 		//std::cout << " R:" << pkgs_recv << endl;

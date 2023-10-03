@@ -74,14 +74,14 @@ class ConnectionHandler {
 	void qread();
 
 	void _send(const std::string& pkg);
+	
+	virtual bool preprocess_pkg(NetPackage& req) { return true; }
 
 protected:
 
 	virtual void send_app_info() { }
 
 	virtual bool validate_app_info(boost::json::object& data) { return true; }
-	
-	virtual bool preprocess_pkg(NetPackage& req) { return true; }
 
 	std::string id;
 
