@@ -149,7 +149,9 @@ public:
 	 */
 	void send_handshake_acknowledgement();
 
-	std::function<void(boost::json::object& pt)> process_pkg_fn;
+	std::function<void(boost::json::object& pt)> process_pkg_fn = nullptr;
+
+	std::function<void()> on_handshake_done = nullptr;
 
 };
 

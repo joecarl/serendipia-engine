@@ -150,8 +150,6 @@ void UdpChannelController::handle_pkg(boost::json::value& json) {
 
 	if (type == "acknowledge") {
 
-		this->confirmed_handshake = true;
-
 		uint64_t id = pkg["id"].to_number<uint64_t>();
 		cout << "<- UDP ACK " << id << endl;
 		//remove unconfirmed_pkg
@@ -160,6 +158,13 @@ void UdpChannelController::handle_pkg(boost::json::value& json) {
 				this->unconfirmed_pkgs.erase(it, it + 1);
 				break;
 			}
+		}
+
+		if (!this->confirmed_handshake) {
+			this->confirmed_handshake = true;
+			if (this->on_handshake_done != nullptr) {
+				this->on_handshake_done();
+			} 
 		}
 
 	} else if (type == "data") {
@@ -352,6 +357,9 @@ void UdpChannelController::send_handshake_acknowledgement() {
 	cout << "-> UDP ACK handshake " << this->remote_id << endl;
 	this->send_acknowledgement(0);
 	this->confirmed_handshake = true;
+	if (this->on_handshake_done != nullptr) {
+		this->on_handshake_done();
+	} 
 
 }
 
