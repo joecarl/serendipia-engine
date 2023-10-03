@@ -61,6 +61,10 @@ class BaseServer {
 	
 	void start_listening();
 
+	void broadcast(const std::string& pkg);
+
+	void assign_client_to_group(Client* cl);
+
 public:
 
 	const AppInfo app_info;

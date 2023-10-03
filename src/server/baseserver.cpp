@@ -71,39 +71,77 @@ void BaseServer::start_listening() {
 void BaseServer::on_new_connection(tcp::socket& socket) {
 
 	cout << "[" << date() << "] New connection!" << endl;
-	bool assigned = false;
 
-	if (clients.size() < this->max_connections) {
-
-		auto cl = new Client(this, std::move(socket));
-		const std::string id = cl->get_id();
-		clients[id] = cl;
-		
-		std::cout << "Client " << id << " connected!" << std::endl;
-
-		Group* gr_ptr = nullptr;
-		for (auto& gr: this->groups) {
-			if (gr.second->is_full()) {
-				continue;
-			}
-			gr_ptr = gr.second;
-			break;
-		}
-		if (gr_ptr == nullptr) {
-			gr_ptr = new Group(this);
-			std::string gid = "G" + std::to_string(gr_ptr->get_id());
-			this->groups[gid] = gr_ptr;
-		}
-		gr_ptr->add_client(cl);
-		
-		cl->start_receive();
-
-		assigned = true;
-
+	if (clients.size() >= this->max_connections) {
+		cerr << "Unable to handle connection, max_connections reached" << endl;
+		return;
 	}
 
-	if (!assigned) {
-		cerr << "Unable to find an available slot for the client" << endl;
+	auto cl = new Client(this, std::move(socket));
+	const std::string id = cl->get_id();
+	clients[id] = cl;
+	cl->start_receive();
+	
+	cl->get_nelh()->add_event_listener("client/login", [this, cl] (boost::json::object& data) {
+		cl->cfg = data["cfg"].as_object();
+		this->assign_client_to_group(cl);
+	});
+	
+	std::cout << "Client " << id << " connected!" << std::endl;
+
+}
+
+
+void BaseServer::assign_client_to_group(Client* cl) {
+
+	Group* gr_ptr = nullptr;
+	
+	for (auto& gr: this->groups) {
+		if (gr.second->is_full()) {
+			continue;
+		}
+		gr_ptr = gr.second;
+		break;
+	}
+
+	if (gr_ptr == nullptr) {
+		gr_ptr = new Group(this);
+		std::string gid = "G" + std::to_string(gr_ptr->get_id());
+		this->groups[gid] = gr_ptr;
+		std::string pkg = ConnectionHandler::pkg_to_raw_data({
+			.type = "groups/create",
+			.data = {
+				{"group", {
+					{"id", gid},
+					{"owner_name", "TEST"},
+				}}
+			}
+		});
+		this->broadcast(pkg);
+	}
+
+	gr_ptr->add_client(cl);
+
+	cl->send_event("groups/join", {
+		{"group", {
+			{"id", "G" + std::to_string(gr_ptr->get_id())},
+			{"owner_id", gr_ptr->get_owner_id()},
+			{"members", gr_ptr->get_members_json()},
+		}}
+	});
+
+}
+
+
+void BaseServer::broadcast(const std::string& pkg) {
+
+	for (auto& cl_iter: this->clients) {
+		auto& cl = cl_iter.second;
+		if (cl != nullptr && cl->is_connected()) {
+			//if (cl->logged || 1) {
+				cl->qsend_udp(pkg);
+			//}
+		}
 	}
 
 }
