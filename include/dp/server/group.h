@@ -44,6 +44,8 @@ class Group {
 
 	BaseGame* game = nullptr;
 
+	std::string owner_id;
+
 	std::unordered_map<std::string, GroupPlayer> players;
 
 	std::queue<boost::json::object> evt_queue;
@@ -56,7 +58,7 @@ class Group {
 
 	void game_main_loop();
 
-	void process_event(boost::json::object &evt);
+	void process_game_event(boost::json::object &evt);
 
 public:
 
@@ -73,6 +75,10 @@ public:
 	void send_to_all(const std::string& pkg);
 
 	void start_game();
+
+	const std::string& get_owner_id() { return this->owner_id; }
+	
+	boost::json::array get_members_json();
 
 };
 

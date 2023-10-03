@@ -8,6 +8,14 @@ using std::endl;
 
 namespace dp::server {
 
+boost::json::object member_to_json(GroupPlayer& pl) {
+	return {
+		{"client_id", pl.client->get_id()},
+		{"name", pl.client->cfg["playerName"].as_string()},
+		{"ready", pl.ready},
+	};
+}
+
 uint64_t Group::count_instances = 0;
 
 Group::Group(BaseServer* _server) : server(_server) {
@@ -19,6 +27,10 @@ Group::Group(BaseServer* _server) : server(_server) {
 
 
 void Group::add_client(Client* cl) {
+
+	if (this->owner_id == "") {
+		this->owner_id = cl->get_id();
+	}
 
 	if (this->is_full()) {
 		return;
@@ -46,6 +58,11 @@ void Group::add_client(Client* cl) {
 		.idx = i,
 	};
 
+	this->send_to_all(ConnectionHandler::pkg_to_raw_data({
+		.type = "group/member_join",
+		.data = { {"member", member_to_json(pl)} }
+	}));
+
 	this->players[player_idx] = pl;
 	cout << "Client " << player_idx << " joined group " << this->get_id() << endl;
 
@@ -59,21 +76,18 @@ void Group::add_client(Client* cl) {
 		
 	});
 
-	nelh->add_event_listener("group/clientConfig", [this, player_idx] (boost::json::object& data) {
+	nelh->add_event_listener("group/set_ready_state", [this, player_idx] (boost::json::object& data) {
 
-		cout << "Client config: " << data << endl;
-		// en este pkg data hay mucha info innecesaria, quiza se deberia 
-		// construir un objecto unevo con lo estrictamente necesario
-		auto player_cfg = data;
-		player_cfg["clientId"] = player_idx;
-		this->players[player_idx].cfg = player_cfg;
-		//set
-	});
-
-	nelh->add_event_listener("group/ready_to_play", [this, player_idx] (boost::json::object& data) {
-
-		cout << "Player ready!!" << endl;
-		this->players[player_idx].ready = true;
+		cout << "Player ready_state changed!!" << endl;
+		this->players[player_idx].ready = data["state"].as_bool();
+		//this->send_member_update(this->players[player_idx]);
+		std::string pkg = ConnectionHandler::pkg_to_raw_data({
+			.type = "group/member_update",
+			.data = {
+				{"member", member_to_json(this->players[player_idx])}
+			}
+		});
+		this->send_to_all(pkg);
 
 		if (!this->is_full()) {
 			return;
@@ -129,7 +143,7 @@ void Group::add_client(Client* cl) {
 
 }
 
-void Group::process_event(boost::json::object &evt) {
+void Group::process_game_event(boost::json::object &evt) {
 
 	//cout << "processing EVT: " << evt << endl;
 
@@ -155,30 +169,30 @@ void Group::start_game() {
 
 	if (io != nullptr) {
 		io->stop();
-		//delete io;
-		//delete t;
+		delete io;
+		delete t;
 	}
 
 	this->new_game();
 
 	io = new boost::asio::io_context();
-
 	t = new boost::asio::steady_timer(*io, boost::asio::chrono::milliseconds(75 * 1000 / 60)); //el 75 se corresponde al delayer, quiza deberia commonizarse
 
 	t->async_wait(boost::bind(&Group::game_main_loop, this));
 
-	boost::json::array players_cfg;
+	boost::json::array players_order;
 	for (auto& pl: this->players) {
-		players_cfg.push_back(pl.second.cfg);
+		players_order.push_back(boost::json::string(pl.second.client->get_id()));
 	}
 
-	boost::json::object pkg = {
-		{"type", "gameStart"},
-		{"seed", this->game->get_rnd_seed()},
-		{"playersCfg", players_cfg}
-	};
-
-	this->send_to_all(boost::json::serialize(pkg));
+	std::string pkg = ConnectionHandler::pkg_to_raw_data({
+		.type = "group/game_start",
+		.data = {
+			{"seed", this->game->get_rnd_seed()},
+			{"players_order", players_order},
+		}
+	});
+	this->send_to_all(pkg);
 
 	boost::thread(boost::bind(&boost::asio::io_context::run, io));
 
@@ -212,7 +226,7 @@ void Group::game_main_loop() {
 
 		if (evt_tick == this->game->tick) {
 
-			this->process_event(evt);
+			this->process_game_event(evt);
 
 			this->evt_queue.pop();
 
@@ -275,6 +289,18 @@ bool Group::is_full() {
 
 	return this->players.size() >= this->max_players;
 
+}
+
+
+boost::json::array Group::get_members_json() {
+
+	boost::json::array members;
+	for (auto& p: this->players) {
+		members.push_back(member_to_json(p.second));
+	}
+
+	return members;
+	
 }
 
 
