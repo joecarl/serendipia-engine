@@ -35,6 +35,11 @@ Connection::~Connection() {
 
 void Connection::connect(const string& host, unsigned short port) {
 
+	if (this->connection_state > CONNECTION_STATE_DISCONNECTED) {
+		cerr << "Socket must be disconnected before connecting again" << endl;
+		return;
+	}
+
 	this->connection_state = CONNECTION_STATE_CONNECTING;
 	
 	boost::thread([=] {
@@ -60,7 +65,7 @@ void Connection::connect(const string& host, unsigned short port) {
 
 			cout << "Connected to " << this->socket.remote_endpoint() << " !" << endl;
 
-			//this->start_ping_thread();
+			this->start_ping_thread();
 			this->start_receive();
 			this->send_app_info();
 			this->io_context.run();
