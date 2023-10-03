@@ -69,17 +69,13 @@ void UdpController::start_receive() {
 				if (type != "handshake") {
 					throw std::runtime_error("First udp pkg received was not of type handshake");
 				}
-		
-				//UdpChannelController new_ch(this, *_remote_endpoint);
 				cout << "!! A new channel was created for this endpoint!" << endl;
-				//this->channels.insert(pair(ep, move(new_ch)));
-				//this->channels.emplace(ep, forward_as_tuple(this, _remote_endpoint));
 				this->channels.emplace(ep, make_unique<UdpChannelController>(this, *_remote_endpoint, sender_id));
 				auto& ch = this->channels.find(ep)->second;
-				ch->send_handshake_acknowledgement();
 				if (this->on_new_channel != nullptr) {
 					this->on_new_channel(*ch);
 				}
+				ch->send_handshake_acknowledgement();
 			} else {
 				ch->second->handle_pkg(json);
 			}
