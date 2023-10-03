@@ -35,14 +35,14 @@ class NetGroupsHandler {
 
 	Connection* net;
 
-	NetEventsListenersHandler* nelh;
-	
 	/** 
 	 * Creates the event handlers for the events scoped with `groups`
 	 */
 	void setup_nelh();
 
 protected:
+	
+	NetEventsListenersHandler* nelh;
 
 	/**
 	 * The current group where the client belongs. If the client never joined
