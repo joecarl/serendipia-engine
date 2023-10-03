@@ -101,7 +101,7 @@ ConnState ConnectionHandler::get_state() {
 
 void ConnectionHandler::qsend_udp(const std::string& pkg) {
 
-	cout << pkg << endl;
+	//cout << pkg << endl;
 	
 	if (this->udp_channel == nullptr || this->connection_state != CONNECTION_STATE_CONNECTED_FULL) {
 		cerr << "TCP fallback" << endl;

@@ -23,7 +23,7 @@ public:
 
 	bool finished = false;
 
-	unsigned int tick = 0;
+	uint64_t tick = 0;
 
 	bool is_finished() { return this->finished; }
 

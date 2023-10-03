@@ -222,10 +222,7 @@ void Group::game_main_loop() {
 	while (this->evt_queue.size() > 0) {
 
 		auto evt = this->evt_queue.front();
-
-		//cout << "checking EVT: " << evt << " | is uint64 ? " << evt["tick"].is_uint64() << endl;
-
-		unsigned int evt_tick = (unsigned int)(evt["tick"].as_uint64());
+		uint64_t evt_tick = evt["tick"].to_number<uint64_t>();
 
 		if (evt_tick == this->game->tick) {
 
@@ -261,7 +258,7 @@ void Group::new_game() {
 
 	delete this->game;
 	
-	//vaciamos la cola de eventos
+	// Vaciamos la cola de eventos
 	std::queue<boost::json::object> empty;
 	std::swap(this->evt_queue, empty);
 

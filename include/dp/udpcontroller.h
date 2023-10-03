@@ -122,7 +122,11 @@ class UdpChannelController {
 
 	void send_acknowledgement(uint64_t id);
 
-	void yield_pkgs_buffer();
+	/**
+	 * Internal method use to process received pkgs in order. This function
+	 * will return true if a package was handled, false otherwise.
+	 */
+	bool yield_pkgs_buffer();
 
 	uint64_t get_new_pkg_id();
 

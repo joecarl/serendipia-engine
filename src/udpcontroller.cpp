@@ -41,23 +41,18 @@ boost::asio::ip::udp::socket& UdpController::get_socket() {
 
 void UdpController::start_receive() {
 
-	//std::shared_ptr<char[]> recv_buff(new char[BUFFSIZE]);
 	auto recv_buff = new char[BUFFSIZE];
-
 	auto _remote_endpoint = make_shared<udp::endpoint>();
 
 	//cout << "!! WAITING FOR NEXT UDP PKG IN BACKGROUND... " << endl;
-
 	auto handler = [&, recv_buff, _remote_endpoint] (const boost::system::error_code& error, size_t bytes_transferred) {
 
-		//string dgram = string(recv_buff.get(), bytes_transferred);
 		string dgram = string(recv_buff, bytes_transferred);
-		cout << "<- UDP | " << *_remote_endpoint << " | " << bytes_transferred << "B" << endl;
+		//cout << "<- UDP | " << *_remote_endpoint << " | " << bytes_transferred << "B" << endl;
 
 		try {
 
 			auto json = boost::json::parse(dgram);
-			
 			//cout << "DECODED: " << json << endl;
 			string sender_id = json.as_object()["sender_id"].as_string().c_str();
 			string ep = _remote_endpoint->address().to_string() + ":" + std::to_string(_remote_endpoint->port()) + ":" + sender_id;
@@ -91,7 +86,6 @@ void UdpController::start_receive() {
 
 	};
 
-	//this->socket.async_receive_from(boost::asio::buffer(recv_buff.get(), BUFFSIZE), *_remote_endpoint, handler);
 	this->socket.async_receive_from(boost::asio::buffer(recv_buff, BUFFSIZE), *_remote_endpoint, handler);
 
 }
@@ -147,7 +141,7 @@ void UdpChannelController::handle_pkg(boost::json::value& json) {
 	if (type == "acknowledge") {
 
 		uint64_t id = pkg["id"].to_number<uint64_t>();
-		cout << "<- UDP ACK " << id << endl;
+		//cout << "<- UDP ACK " << id << endl;
 		//remove unconfirmed_pkg
 		for (auto it = this->unconfirmed_pkgs.begin(); it < this->unconfirmed_pkgs.end(); it++) {
 			if (id == *it) {
@@ -173,7 +167,7 @@ void UdpChannelController::handle_pkg(boost::json::value& json) {
 			//cout << "pushing to pkgs_buffer... " << endl;
 			this->pkgs_buffer[id] = pkg;
 			//cout << "yield... " << endl;
-			this->yield_pkgs_buffer();
+			while(this->yield_pkgs_buffer());
 		} else {
 			//ignore this package, it was already processed!
 		}
@@ -187,10 +181,10 @@ void UdpChannelController::handle_pkg(boost::json::value& json) {
 }
 
 
-void UdpChannelController::yield_pkgs_buffer() {
+bool UdpChannelController::yield_pkgs_buffer() {
 
 	if (this->process_pkg_fn == nullptr) {
-		return;
+		return false;
 	}
 
 	uint64_t next_pkg_to_handle_id = this->last_handled_pkg_id + 1;
@@ -198,7 +192,7 @@ void UdpChannelController::yield_pkgs_buffer() {
 	auto pkg_it = this->pkgs_buffer.find(next_pkg_to_handle_id);
 
 	if (pkg_it == this->pkgs_buffer.end()) {
-		return;
+		return false;
 	}
 	
 	auto& pkg = pkg_it->second;
@@ -213,8 +207,8 @@ void UdpChannelController::yield_pkgs_buffer() {
 	if (rem > 0) {
 		cout << " [] ---> Remaining pkgs to yield: " << rem << endl;
 	}
-	this->yield_pkgs_buffer(); // TODO: rethink, es posible que usar recursividad aqui sea inapropiado 
-
+	//this->yield_pkgs_buffer(); // TODO: rethink, es posible que usar recursividad aqui sea inapropiado 
+	return true;
 }
 
 
@@ -287,13 +281,14 @@ void UdpChannelController::_send(const string& data, uint64_t id, uint64_t count
 	};
 
 	auto handler = [this, check, count, t] (const boost::system::error_code& error, std::size_t bytes_transferred) {
-
+/*
 		cout << "-> UDP | " << this->remote_endpoint << " | " << bytes_transferred << "B";
 		if (count > 0) {
 			cout << " | !! T" << count << endl;
 		} else {
 			cout << endl;
 		}
+*/
 		//cerr << " entering _send handler " << endl;
 		if (error) {
 			throw std::runtime_error("ERROR: (_send handler) " + error.message());

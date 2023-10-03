@@ -45,7 +45,7 @@ public:
 
 	Client(BaseServer* _server, boost::asio::ip::tcp::socket&& _socket);
 	
-	//~Client();
+	virtual ~Client() {};
 
 	NetEventsListenersHandler* get_nelh() { return this->nelh; }
 
