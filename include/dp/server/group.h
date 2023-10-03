@@ -48,6 +48,8 @@ class Group {
 
 	std::unordered_map<std::string, GroupPlayer> players;
 
+	std::vector<std::string> sorted_members_ids;
+
 	std::queue<boost::json::object> evt_queue;
 
 	boost::asio::io_context *io = nullptr;

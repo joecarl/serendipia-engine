@@ -1,6 +1,7 @@
 #include <dp/client/netgroup.h>
 #include <dp/client/connection.h>
 #include <stdexcept>
+#include <iostream>
 
 using boost::json::object;
 using std::string;
@@ -31,6 +32,7 @@ NetGroup::NetGroup(Connection* _net, string _id, string _owner_id, boost::json::
 		object m = _m.as_object();
 		string client_id = m["client_id"].as_string().c_str();
 		this->members[client_id] = parse_group_member(m);
+		this->sorted_members_ids.push_back(client_id);
 	}
 
 	this->set_group_listeners();
@@ -57,11 +59,13 @@ void NetGroup::set_group_listeners() {
 		object m = data["member"].as_object();
 		string client_id = m["client_id"].as_string().c_str();
 		this->members[client_id] = parse_group_member(m);
+		this->sorted_members_ids.push_back(client_id);
 	});
 
 	this->nelh->add_event_listener("group/member_leave", [this] (object& data) {
 		string client_id = data["client_id"].as_string().c_str();
 		this->members.erase(client_id);
+		// TODO: delete from sorted_mem
 		this->owner_id = data["new_owner_id"].as_string().c_str();
 	});
 
@@ -89,6 +93,23 @@ const GroupMember* NetGroup::get_member_info(const std::string& id) {
 		return nullptr;
 	}
 	return &(iter->second);
+}
+
+
+const std::vector<GroupMember> NetGroup::get_members() { 
+
+	std::vector<GroupMember> v;
+	for (auto& id: this->sorted_members_ids) {
+		auto m = this->members.find(id);
+		if (m == this->members.end()) {
+			std::cerr << "Group member not found: " << id << std::endl;
+			continue;
+		}
+		v.push_back(m->second);
+	}
+
+	return v;
+
 }
 
 } // namespace dp::client

@@ -74,6 +74,7 @@ void Group::add_client(Client* cl) {
 	}));
 
 	this->players[player_idx] = pl;
+	this->sorted_members_ids.push_back(player_idx);
 	cout << "Client " << player_idx << " joined group " << this->get_id() << endl;
 
 	auto nelh = cl->get_nelh();
@@ -82,6 +83,7 @@ void Group::add_client(Client* cl) {
 
 		//cout << "onDrop event callback!!" << endl;
 		this->players.erase(player_idx);
+		// TODO: also remove from sorted_members_ids
 		cout << "Player with key " << player_idx << " dropped from group" << endl;
 		
 	});
@@ -121,7 +123,7 @@ void Group::add_client(Client* cl) {
 	});
 
 	nelh->add_event_listener("game/event", [this, player_idx] (boost::json::object& data) {
-	
+		/*
 		uint64_t orig_tick = data["tick"].to_number<uint64_t>();
 		uint64_t tick_diff = 0; 
 
@@ -131,16 +133,18 @@ void Group::add_client(Client* cl) {
 		}
 
 		cout << "TICK: " << this->game->tick << " | IDX: " << this->players[player_idx].idx << endl;
-		data["player_key"] = this->players[player_idx].idx; //player_idx;
 		data["tick"] = this->game->tick + 0; //TODO: auto calc tick delay based on clients connection?
-
+		*/
+		data["player_key"] = this->players[player_idx].idx; //player_idx;
 		this->evt_queue.push(data);
 
+/*
 		const std::string raw_data = ConnectionHandler::pkg_to_raw_data({
 			.type = "game/event",
 			.data = data,
 		});
 		this->send_to_all(raw_data);
+*/
 	
 	});
 
@@ -182,12 +186,11 @@ void Group::start_game() {
 	t = new boost::asio::steady_timer(*io, boost::asio::chrono::milliseconds(75 * 1000 / 60)); //el 75 se corresponde al delayer, quiza deberia commonizarse
 
 	t->async_wait(boost::bind(&Group::game_main_loop, this));
-
+	
 	boost::json::array players_order;
-	for (auto& pl: this->players) {
-		players_order.push_back(boost::json::string(pl.second.client->get_id()));
+	for (auto& id: this->sorted_members_ids) {
+		players_order.push_back(boost::json::string(id));
 	}
-
 	std::string pkg = ConnectionHandler::pkg_to_raw_data({
 		.type = "group/game_start",
 		.data = {
@@ -222,6 +225,16 @@ void Group::game_main_loop() {
 	while (this->evt_queue.size() > 0) {
 
 		auto evt = this->evt_queue.front();
+
+
+		evt["tick"] = this->game->tick;
+		const std::string raw_data = ConnectionHandler::pkg_to_raw_data({
+			.type = "game/event",
+			.data = evt,
+		});
+		this->send_to_all(raw_data);
+
+
 		uint64_t evt_tick = evt["tick"].to_number<uint64_t>();
 
 		if (evt_tick == this->game->tick) {
@@ -231,6 +244,7 @@ void Group::game_main_loop() {
 
 		} else if (evt_tick < this->game->tick) {
 
+			cerr << evt_tick << " < " << this->game->tick << " !!!!!!!!" << endl;
 			throw std::runtime_error("Evento perdido");
 
 		} else {
@@ -289,8 +303,13 @@ bool Group::is_full() {
 boost::json::array Group::get_members_json() {
 
 	boost::json::array members;
-	for (auto& p: this->players) {
-		members.push_back(member_to_json(p.second));
+	for (auto& id: this->sorted_members_ids) {
+		auto p_iter = this->players.find(id);
+		if (p_iter == this->players.end()){
+			cerr << "Group member not found: " << id << endl;
+			continue;
+		}
+		members.push_back(member_to_json(p_iter->second));
 	}
 
 	return members;

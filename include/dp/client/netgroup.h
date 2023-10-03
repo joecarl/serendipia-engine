@@ -26,6 +26,7 @@ typedef struct {
 class NetGroup {
 
 protected:
+
 	/**
 	 * The net service used to receive the group information
 	 */
@@ -53,6 +54,8 @@ protected:
 	 */
 	std::unordered_map<std::string, GroupMember> members;
 
+	std::vector<std::string> sorted_members_ids;
+
 public:
 
 	NetGroup(Connection* net, std::string id, std::string owner_id, boost::json::array& members);
@@ -77,7 +80,7 @@ public:
 
 	const GroupMember* get_member_info(const std::string& id);
 
-	const std::unordered_map<std::string, GroupMember>& get_members() { return this->members; }
+	const std::vector<GroupMember> get_members();
 
 };
 
