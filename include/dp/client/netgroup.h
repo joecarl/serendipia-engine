@@ -77,6 +77,8 @@ public:
 
 	const GroupMember* get_member_info(const std::string& id);
 
+	const std::unordered_map<std::string, GroupMember>& get_members() { return this->members; }
+
 };
 
 } // namespace dp::client
