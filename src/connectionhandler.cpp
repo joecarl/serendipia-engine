@@ -81,6 +81,11 @@ void ConnectionHandler::set_udp_channel(UdpChannelController* ch) {
 		this->handle_json_pkg(pkg);
 	};
 
+	this->udp_channel->on_handshake_done = [this] {
+		this->connection_state = CONNECTION_STATE_CONNECTED_FULL;
+		cout << "CONNECTION_STATE_CONNECTED_FULL" << endl;
+	};
+
 }
 
 
@@ -98,7 +103,7 @@ void ConnectionHandler::qsend_udp(const std::string& pkg) {
 
 	cout << pkg << endl;
 	
-	if (this->udp_channel == nullptr) {
+	if (this->udp_channel == nullptr || this->connection_state != CONNECTION_STATE_CONNECTED_FULL) {
 		cerr << "TCP fallback" << endl;
 		this->qsend(pkg);
 		return;

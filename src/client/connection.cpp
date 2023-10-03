@@ -90,8 +90,6 @@ void Connection::setup_udp(string& local_id) {
 	udp_ch->send_handshake();
 	this->set_udp_channel(udp_ch);
 
-	this->connection_state = CONNECTION_STATE_CONNECTED_FULL;
-
 }
 
 
