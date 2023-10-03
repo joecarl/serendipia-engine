@@ -41,6 +41,8 @@ class Client : public ConnectionHandler {
 
 public:
 
+	boost::json::object cfg;
+
 	Client(BaseServer* _server, boost::asio::ip::tcp::socket&& _socket);
 	
 	//~Client();
