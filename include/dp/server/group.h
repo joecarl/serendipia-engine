@@ -60,6 +60,8 @@ class Group {
 
 	void process_game_event(boost::json::object &evt);
 
+	void send_member_update(const GroupPlayer& m);
+
 public:
 
 	Group(BaseServer* _server);

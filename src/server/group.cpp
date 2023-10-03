@@ -8,7 +8,7 @@ using std::endl;
 
 namespace dp::server {
 
-boost::json::object member_to_json(GroupPlayer& pl) {
+boost::json::object member_to_json(const GroupPlayer& pl) {
 	return {
 		{"client_id", pl.client->get_id()},
 		{"name", pl.client->cfg["playerName"].as_string()},
@@ -20,9 +20,19 @@ uint64_t Group::count_instances = 0;
 
 Group::Group(BaseServer* _server) : server(_server) {
 
-	//this->new_game();
 	this->id_group = count_instances++;
 
+}
+
+
+void Group::send_member_update(const GroupPlayer& m) {
+	std::string pkg = ConnectionHandler::pkg_to_raw_data({
+		.type = "group/member_update",
+		.data = {
+			{"member", member_to_json(m)}
+		}
+	});
+	this->send_to_all(pkg);
 }
 
 
@@ -80,14 +90,7 @@ void Group::add_client(Client* cl) {
 
 		cout << "Player ready_state changed!!" << endl;
 		this->players[player_idx].ready = data["state"].as_bool();
-		//this->send_member_update(this->players[player_idx]);
-		std::string pkg = ConnectionHandler::pkg_to_raw_data({
-			.type = "group/member_update",
-			.data = {
-				{"member", member_to_json(this->players[player_idx])}
-			}
-		});
-		this->send_to_all(pkg);
+		this->send_member_update(this->players[player_idx]);
 
 		if (!this->is_full()) {
 			return;
@@ -113,7 +116,10 @@ void Group::add_client(Client* cl) {
 		};
 
 		cerr << "!! RESYNC " << o << endl;
-		this->players[player_idx].client->qsend_udp(boost::json::serialize(o));
+		this->players[player_idx].client->send_event(ConnectionHandler::pkg_to_raw_data({
+			.type = "game/event",
+			.data = o
+		}));
 
 	});
 
@@ -227,7 +233,6 @@ void Group::game_main_loop() {
 		if (evt_tick == this->game->tick) {
 
 			this->process_game_event(evt);
-
 			this->evt_queue.pop();
 
 		} else if (evt_tick < this->game->tick) {
@@ -245,17 +250,11 @@ void Group::game_main_loop() {
 	this->game->process_tick();
 
 	if (this->game->is_finished()) {
-		
-		//this->new_game();
-
 		return;
-
 	}
 
 	useconds_t usec = 1000000 / 60;
-	
 	t->expires_at(t->expiry() + boost::asio::chrono::microseconds(usec));
-
 	t->async_wait(boost::bind(&Group::game_main_loop, this));
 
 }
@@ -273,6 +272,7 @@ void Group::new_game() {
 	//cout << "New game created, tick: " << this->game->tick << endl;
 	for (auto& pl: this->players) {
 		pl.second.ready = false;
+		this->send_member_update(pl.second);
 	}
 
 }
