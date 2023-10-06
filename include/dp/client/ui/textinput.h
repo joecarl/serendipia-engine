@@ -13,11 +13,6 @@ namespace dp::client {
 namespace dp::client::ui {
 
 class TextInput : public Input {
-	
-	/**
-	 * The font used to draw the text
-	 */
-	BaseClient* engine;
 
 	/**
 	 * An empty string for editting
@@ -58,18 +53,12 @@ public:
 	TextInput(BaseClient* _engine);
 
 	void reset();
-	
-	void process_key(wchar_t ASCII, int control_key);
 
 	void draw(float x, float y);
 
-	void focus();
-
-	void blur();
-
-	bool is_focused();
-
 	bool is_valid();
+	
+	void process_key(wchar_t ASCII, int control_key);
 
 	std::string get_validation_msg();
 	

@@ -7,35 +7,16 @@
 namespace dp::client::ui {
 
 TextInput::TextInput(BaseClient* _engine) :
-	engine(_engine)
+	Input(_engine)
 {
 	this->type = INPUT_TYPE_TEXT;
+	this->value_type = INPUT_VALUE_TYPE_STRING;
 	//font = fuente;//al_load_ttf_font("font.ttf", 2*9, 0);
 	reset();
 
 }
 
-void TextInput::focus() {
-	
-	this->engine->set_active_input(this);
-	
-}
 
-
-bool TextInput::is_focused() {
-
-	return this->engine->get_active_input() == this;
-
-}
-
-
-void TextInput::blur() {
-
-	if (this->is_focused()) {
-		this->engine->set_active_input(nullptr);
-	} 
-
-}
 
 void TextInput::reset() {
 
