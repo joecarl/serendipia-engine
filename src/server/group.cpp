@@ -26,13 +26,11 @@ Group::Group(BaseServer* _server) : server(_server) {
 
 
 void Group::send_member_update(const GroupPlayer& m) {
-	std::string pkg = ConnectionHandler::pkg_to_raw_data({
-		.type = "group/member_update",
-		.data = {
-			{"member", member_to_json(m)}
-		}
+	
+	this->broadcast_event("group/member_update", {
+		{"member", member_to_json(m)}
 	});
-	this->send_to_all(pkg);
+
 }
 
 
@@ -68,10 +66,9 @@ void Group::add_client(Client* cl) {
 		.idx = i,
 	};
 
-	this->send_to_all(ConnectionHandler::pkg_to_raw_data({
-		.type = "group/member_join",
-		.data = { {"member", member_to_json(pl)} }
-	}));
+	this->broadcast_event("group/member_join", { 
+		{"member", member_to_json(pl)} 
+	});
 
 	this->players[player_idx] = pl;
 	this->sorted_members_ids.push_back(player_idx);
@@ -131,21 +128,15 @@ void Group::add_client(Client* cl) {
 			tick_diff = this->game->tick - orig_tick;
 			cout << "Tick diff: " << tick_diff << endl;
 		}
-
-		cout << "TICK: " << this->game->tick << " | IDX: " << this->players[player_idx].idx << endl;
-		data["tick"] = this->game->tick + 0; //TODO: auto calc tick delay based on clients connection?
 		*/
+
+		//cout << "TICK: " << this->game->tick << " | IDX: " << this->players[player_idx].idx << endl;
+		//data["tick"] = this->game->tick + 0; //TODO: auto calc tick delay based on clients connection?
 		data["player_key"] = this->players[player_idx].idx; //player_idx;
 		this->evt_queue.push(data);
 
-/*
-		const std::string raw_data = ConnectionHandler::pkg_to_raw_data({
-			.type = "game/event",
-			.data = data,
-		});
-		this->send_to_all(raw_data);
-*/
-	
+		//this->broadcast_event("game/event", data);
+
 	});
 
 }
@@ -191,20 +182,16 @@ void Group::start_game() {
 	for (auto& id: this->sorted_members_ids) {
 		players_order.push_back(boost::json::string(id));
 	}
-	std::string pkg = ConnectionHandler::pkg_to_raw_data({
-		.type = "group/game_start",
-		.data = {
-			{"seed", this->game->get_rnd_seed()},
-			{"players_order", players_order},
-		}
+	this->broadcast_event("group/game_start", {
+		{"seed", this->game->get_rnd_seed()},
+		{"players_order", players_order},
 	});
-	this->send_to_all(pkg);
 
 	boost::thread(boost::bind(&boost::asio::io_context::run, io));
 
 }
 
-void Group::send_to_all(const std::string& pkg) {
+void Group::broadcast(const std::string& pkg) {
 
 	for (auto& pl : this->players) {
 		auto cl = pl.second.client;
@@ -214,6 +201,16 @@ void Group::send_to_all(const std::string& pkg) {
 			//}
 		}
 	}
+
+}
+
+void Group::broadcast_event(const std::string& type, const boost::json::object& data) {
+
+	const std::string raw_data = ConnectionHandler::pkg_to_raw_data({
+		.type = type,
+		.data = data,
+	});
+	this->broadcast(raw_data);
 
 }
 
@@ -228,11 +225,7 @@ void Group::game_main_loop() {
 
 
 		evt["tick"] = this->game->tick;
-		const std::string raw_data = ConnectionHandler::pkg_to_raw_data({
-			.type = "game/event",
-			.data = evt,
-		});
-		this->send_to_all(raw_data);
+		this->broadcast_event("game/event", evt);
 
 
 		uint64_t evt_tick = evt["tick"].to_number<uint64_t>();

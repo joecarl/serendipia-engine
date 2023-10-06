@@ -76,8 +76,10 @@ public:
 
 	void add_client(Client* cl);
 
-	void send_to_all(const std::string& pkg);
+	void broadcast(const std::string& pkg);
 
+	void broadcast_event(const std::string& type, const boost::json::object& data);
+	
 	void start_game();
 
 	const std::string& get_owner_id() { return this->owner_id; }
