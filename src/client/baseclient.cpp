@@ -13,7 +13,9 @@
 
 using std::cout;
 using std::endl;
+using dp::client::ui::Input;
 using dp::client::ui::TextInput;
+using dp::client::ui::SelectInput;
 using dp::client::ui::TouchKeys;
 using dp::client::ui::TouchKeysCell;
 
@@ -382,8 +384,10 @@ void BaseClient::draw() {
 	if (this->active_touch_keys != nullptr) {
 		this->active_touch_keys->draw();
 	}
+
+	auto inp = this->get_active_input();
 	
-	if (this->get_active_input()) {
+	if (inp && inp->get_type() == ui::INPUT_TYPE_TEXT) {
 		ALLEGRO_COLOR btn_bgcolor = al_map_rgb(150, 200, 150);
 		if (this->active_touch_keys != &(this->kb_touch_keys)) {
 			btn_bgcolor = al_map_rgb(120, 140, 120);
@@ -429,11 +433,22 @@ TextInput* BaseClient::create_text_input() {
 
 }
 
-void BaseClient::set_active_input(TextInput* inp) {
+SelectInput* BaseClient::create_select_input() {
+
+	auto inp = std::make_unique<SelectInput>(this);
+	SelectInput* inp_ptr = inp.get();
+
+	this->select_inputs.push_back(std::move(inp));
+	
+	return inp_ptr;
+
+}
+
+void BaseClient::set_active_input(Input* inp) {
 	this->active_input = inp;
 }
 
-TextInput* BaseClient::get_active_input() {
+Input* BaseClient::get_active_input() {
 	return this->active_input;
 }
 
@@ -470,7 +485,8 @@ void BaseClient::on_event(ALLEGRO_EVENT event) {
 
 	else if (
 		event.type == ALLEGRO_EVENT_TOUCH_BEGIN && 
-		this->get_active_input()
+		this->active_input &&
+		this->active_input->get_type() == ui::INPUT_TYPE_TEXT
 	) {
 
 		float scaled = this->allegro_hnd.get_scaled();
@@ -488,6 +504,18 @@ void BaseClient::on_event(ALLEGRO_EVENT event) {
 
 	active_stage->on_event(event);
 
+}
+
+std::vector<ui::SelectOption> bool_opts = {
+	{ .label = "Yes", .value = "true" },
+	{ .label = "No", .value = "false" },
+};
+
+SelectInput* BaseClient::create_boolean_input() {
+	auto inp = this->create_select_input();
+	inp->set_options(bool_opts);
+	inp->set_value_type(ui::INPUT_VALUE_TYPE_BOOL);
+	return inp;
 }
 
 } // namespace dp::client

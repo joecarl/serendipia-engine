@@ -8,6 +8,7 @@
 #include <dp/client/stage.h>
 #include <dp/client/ui/touchkeys.h>
 #include <dp/client/ui/textinput.h>
+#include <dp/client/ui/selectinput.h>
 
 #include <allegro5/allegro.h>
 #include <allegro5/allegro_font.h>
@@ -20,7 +21,9 @@ namespace dp::client {
 class BaseClient {
 
 	using TouchKeys = ui::TouchKeys;
+	using Input = ui::Input;
 	using TextInput = ui::TextInput;
+	using SelectInput = ui::SelectInput;
 
 	double old_time = 0;
 
@@ -42,7 +45,12 @@ class BaseClient {
 
 	std::vector<std::unique_ptr<TextInput>> text_inputs;
 
-	TextInput* active_input = nullptr;
+	std::vector<std::unique_ptr<SelectInput>> select_inputs;
+
+	// TODO: ver si es posible algo así:
+	//std::vector<std::unique_ptr<Input>> inputs;
+
+	Input* active_input = nullptr;
 
 	Connection connection;
 
@@ -103,13 +111,20 @@ public:
 	 */
 	const std::string get_storage_dir();
 
-	TextInput* create_text_input();
-	
-	void set_active_input(TextInput* input);
-
 	ALLEGRO_BITMAP* load_bitmap_resource(const std::string& filename);
 
-	TextInput* get_active_input();
+	TextInput* create_text_input();
+
+	SelectInput* create_select_input();
+
+	/**
+	 * A select input with predefined options (YES/NO) and boolean value type
+	 */
+	SelectInput* create_boolean_input();
+	
+	void set_active_input(Input* input);
+
+	Input* get_active_input();
 
 	TouchKeys& get_touch_keys() { return this->touch_keys; }
 
