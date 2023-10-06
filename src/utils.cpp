@@ -1,7 +1,5 @@
 
 #include <dp/utils.h>
-//#include "appinfo.h"
-
 #include <cstdio>
 #include <iostream>
 #include <memory>
@@ -192,6 +190,18 @@ int64_t time_ms() {
 	return std::chrono::duration_cast<std::chrono::milliseconds>(
 		std::chrono::system_clock::now().time_since_epoch()
 	).count();
+
+}
+
+bool get_bool(const boost::json::object& obj, const std::string& key, bool default_value) {
+
+	auto iter = obj.find(key);
+	
+	if (iter == obj.end() || !iter->value().is_bool()) {
+		return default_value;
+	}
+
+	return iter->value().get_bool();
 
 }
 
