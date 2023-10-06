@@ -56,6 +56,8 @@ protected:
 
 	std::vector<std::string> sorted_members_ids;
 
+	void remove_member(const std::string& id);
+
 public:
 
 	NetGroup(Connection* net, std::string id, std::string owner_id, boost::json::array& members);

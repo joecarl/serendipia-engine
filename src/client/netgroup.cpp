@@ -45,6 +45,14 @@ NetGroup::~NetGroup() {
 
 }
 
+void NetGroup::remove_member(const std::string& id) {
+	this->members.erase(id);
+	auto pos = std::find(this->sorted_members_ids.begin(), this->sorted_members_ids.end(), id);
+	if (pos != this->sorted_members_ids.end()) {
+		this->sorted_members_ids.erase(pos, pos + 1);
+	}
+}
+
 const GroupMember& NetGroup::get_owner() { 
 	auto iter = this->members.find(this->owner_id);
 	if (iter == this->members.end()) {
@@ -58,14 +66,14 @@ void NetGroup::set_group_listeners() {
 	this->nelh->add_event_listener("group/member_join", [this] (object& data) {
 		object m = data["member"].as_object();
 		string client_id = m["client_id"].as_string().c_str();
+		// TODO: check key does not exist...
 		this->members[client_id] = parse_group_member(m);
 		this->sorted_members_ids.push_back(client_id);
 	});
 
 	this->nelh->add_event_listener("group/member_leave", [this] (object& data) {
 		string client_id = data["client_id"].as_string().c_str();
-		this->members.erase(client_id);
-		// TODO: delete from sorted_mem
+		this->remove_member(client_id);
 		this->owner_id = data["new_owner_id"].as_string().c_str();
 	});
 
