@@ -70,13 +70,6 @@ std::string date();
  */
 int64_t time_ms();
 
-/**
- * Retrieves the boolean value held by the json object property whose key is
- * `key`. If the value does not exist or is not boolean `default_value`
- * is returned
- */
-bool get_bool(const boost::json::object& obj, const std::string& key, bool default_value = false);
-
 } // namespace dp
 
 #endif

@@ -193,16 +193,5 @@ int64_t time_ms() {
 
 }
 
-bool get_bool(const boost::json::object& obj, const std::string& key, bool default_value) {
-
-	auto iter = obj.find(key);
-	
-	if (iter == obj.end() || !iter->value().is_bool()) {
-		return default_value;
-	}
-
-	return iter->value().get_bool();
-
-}
 
 } // namespace dp
