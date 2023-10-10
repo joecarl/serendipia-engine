@@ -1,6 +1,8 @@
 #ifndef GROUP_H
 #define GROUP_H
 
+#include <dp/object.h>
+
 #include <ctime>
 #include <vector>
 #include <queue>
@@ -13,6 +15,7 @@
 
 namespace dp {
 	class BaseGame;
+	class Object;
 	namespace server {
 		class Client;
 		class BaseServer;
@@ -27,7 +30,7 @@ typedef struct {
 
 	bool ready;
 
-	boost::json::object cfg;
+	Object cfg;
 
 	// TODO: (pensar) en lugar de este idx usar una funcion register_player en la clase BaseGame? que reciba un key string y lo asigne a un player y devuelva el indice asignado?
 	uint64_t idx;
@@ -50,7 +53,7 @@ class Group {
 
 	std::vector<std::string> sorted_members_ids;
 
-	std::queue<boost::json::object> evt_queue;
+	std::queue<Object> evt_queue;
 
 	boost::asio::io_context *io = nullptr;
 
@@ -60,7 +63,7 @@ class Group {
 
 	void game_main_loop();
 
-	void process_game_event(boost::json::object &evt);
+	void process_game_event(const Object &evt);
 
 	void send_member_update(const GroupPlayer& m);
 
@@ -80,7 +83,7 @@ public:
 
 	void broadcast(const std::string& pkg);
 
-	void broadcast_event(const std::string& type, const boost::json::object& data);
+	void broadcast_event(const std::string& type, const Object& data);
 	
 	void start_game();
 

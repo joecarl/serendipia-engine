@@ -123,7 +123,7 @@ void AllegroHandler::extract_assets(const std::string& path) {
 
 void AllegroHandler::create_components() {
 
-	bool windowed = this->engine->get_cfg()["windowed"].as_bool();
+	bool windowed = this->engine->get_cfg().sget<bool>("windowed");
 	
 	if (!windowed) {
 		al_set_new_display_flags(ALLEGRO_FULLSCREEN_WINDOW);

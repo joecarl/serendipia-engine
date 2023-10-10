@@ -33,7 +33,7 @@ class Client : public ConnectionHandler {
 
 	bool app_validated = false;
 
-	bool validate_app_info(boost::json::object& data);
+	bool validate_app_info(const Object& data);
 
 	bool preprocess_pkg(NetPackage& pkg);
 
@@ -41,7 +41,7 @@ class Client : public ConnectionHandler {
 
 public:
 
-	boost::json::object cfg;
+	Object cfg;
 
 	Client(BaseServer* _server, boost::asio::ip::tcp::socket&& _socket);
 	

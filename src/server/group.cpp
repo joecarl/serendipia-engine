@@ -11,7 +11,7 @@ namespace dp::server {
 boost::json::object member_to_json(const GroupPlayer& pl) {
 	return {
 		{"client_id", pl.client->get_id()},
-		{"name", pl.client->cfg["playerName"].as_string()},
+		{"name", pl.client->cfg.sget<std::string>("playerName", "")},
 		{"ready", pl.ready},
 	};
 }
@@ -101,17 +101,17 @@ void Group::add_client(Client* cl) {
 
 	auto nelh = cl->get_nelh();
 
-	nelh->add_event_listener("net/disconnect", [this, player_idx] (boost::json::object& data) {
+	nelh->add_event_listener("net/disconnect", [this, player_idx] (const Object& data) {
 
 		//cout << "onDrop event callback!!" << endl;
 		this->drop_member(player_idx);
 		
 	});
 
-	nelh->add_event_listener("group/set_ready_state", [this, player_idx] (boost::json::object& data) {
+	nelh->add_event_listener("group/set_ready_state", [this, player_idx] (const Object& data) {
 
 		cout << "Player ready_state changed!!" << endl;
-		this->players[player_idx].ready = data["state"].as_bool();
+		this->players[player_idx].ready = data["state"];
 		this->send_member_update(this->players[player_idx]);
 
 		if (!this->is_full()) {
@@ -130,11 +130,11 @@ void Group::add_client(Client* cl) {
 
 	});
 
-	nelh->add_event_listener("game/desync", [this, player_idx] (boost::json::object& data) {
+	nelh->add_event_listener("game/desync", [this, player_idx] (const Object& data) {
 
-		boost::json::object o = {
+		Object o = {
 			{"type", "sync"},
-			{"gamevars", this->server->export_game(this->game)}
+			{"gamevars", this->server->export_game(this->game).json()}
 		};
 
 		cerr << "!! RESYNC " << o << endl;
@@ -142,7 +142,7 @@ void Group::add_client(Client* cl) {
 
 	});
 
-	nelh->add_event_listener("game/event", [this, player_idx] (boost::json::object& data) {
+	nelh->add_event_listener("game/event", [this, player_idx] (const Object& data) {
 		/*
 		uint64_t orig_tick = data["tick"].to_number<uint64_t>();
 		uint64_t tick_diff = 0; 
@@ -155,8 +155,9 @@ void Group::add_client(Client* cl) {
 
 		//cout << "TICK: " << this->game->tick << " | IDX: " << this->players[player_idx].idx << endl;
 		//data["tick"] = this->game->tick + 0; //TODO: auto calc tick delay based on clients connection?
-		data["player_key"] = this->players[player_idx].idx; //player_idx;
-		this->evt_queue.push(data);
+		Object evt = data;
+		evt.set("player_key", this->players[player_idx].idx); //player_idx;
+		this->evt_queue.push(evt);
 
 		//this->broadcast_event("game/event", data);
 
@@ -164,17 +165,17 @@ void Group::add_client(Client* cl) {
 
 }
 
-void Group::process_game_event(boost::json::object &evt) {
+void Group::process_game_event(const Object &evt) {
 
 	//cout << "processing EVT: " << evt << endl;
 
-	auto evt_type = evt["type"].as_string();
+	std::string evt_type = evt["type"];
 		
 	if (evt_type == "set_control_state") {
 		
-		int control = evt["control"].to_number<int64_t>();
-		bool new_state = evt["state"].as_bool();
-		int player_idx = evt["player_key"].to_number<int64_t>();
+		int control = evt["control"];
+		bool new_state = evt["state"];
+		int player_idx = evt["player_key"];
 		
 		this->game->set_player_control_state(player_idx, control, new_state);
 
@@ -227,7 +228,7 @@ void Group::broadcast(const std::string& pkg) {
 
 }
 
-void Group::broadcast_event(const std::string& type, const boost::json::object& data) {
+void Group::broadcast_event(const std::string& type, const Object& data) {
 
 	const std::string raw_data = ConnectionHandler::pkg_to_raw_data({
 		.type = type,
@@ -247,11 +248,11 @@ void Group::game_main_loop() {
 		auto evt = this->evt_queue.front();
 
 
-		evt["tick"] = this->game->tick;
+		evt.set("tick", this->game->tick);
 		this->broadcast_event("game/event", evt);
 
 
-		uint64_t evt_tick = evt["tick"].to_number<uint64_t>();
+		uint64_t evt_tick = evt["tick"];
 
 		if (evt_tick == this->game->tick) {
 
@@ -289,7 +290,7 @@ void Group::new_game() {
 	delete this->game;
 	
 	// Vaciamos la cola de eventos
-	std::queue<boost::json::object> empty;
+	std::queue<Object> empty;
 	std::swap(this->evt_queue, empty);
 
 	this->game = this->server->create_game();

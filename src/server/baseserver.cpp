@@ -82,8 +82,8 @@ void BaseServer::on_new_connection(tcp::socket& socket) {
 	clients[id] = cl;
 	cl->start_receive();
 	
-	cl->get_nelh()->add_event_listener("client/login", [this, cl] (boost::json::object& data) {
-		cl->cfg = data["cfg"].as_object();
+	cl->get_nelh()->add_event_listener("client/login", [this, cl] (const Object& data) {
+		cl->cfg = data["cfg"];
 		this->assign_client_to_group(cl);
 	});
 	

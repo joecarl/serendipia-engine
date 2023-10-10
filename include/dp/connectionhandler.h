@@ -18,7 +18,7 @@ namespace dp {
 typedef struct {
 	uint64_t id;
 	std::string type;
-	boost::json::object data;
+	Object data;
 } NetPackage;
 
 enum ConnState {
@@ -69,7 +69,7 @@ class ConnectionHandler {
 
 	void handle_qread_content(const boost::system::error_code& error, std::size_t bytes_transferred);
 	
-	void handle_json_pkg(boost::json::object& obj);
+	void handle_json_pkg(const Object& obj);
 
 	void process_request(NetPackage& req);
 	
@@ -83,10 +83,9 @@ protected:
 
 	virtual void send_app_info() { }
 
-	virtual bool validate_app_info(boost::json::object& data) { return true; }
+	virtual bool validate_app_info(const Object& data) { return true; }
 
-	void dispatch_listeners(const std::string& type, boost::json::object& data);
-	// TODO: void dispatch_listeners(const std::string& type, const boost::json::object& data = {});
+	void dispatch_listeners(const std::string& type, const Object& data = {});
 
 	std::string id;
 
@@ -128,14 +127,14 @@ public:
 	 * @param _cb the callback function which will be executed when the 
 	 * response arrives
 	 */
-	void send_request(const std::string& type, const boost::json::object& data = {}, const CallbackFnType& _cb = nullptr);
+	void send_request(const std::string& type, const Object& data = {}, const CallbackFnType& _cb = nullptr);
 
 	/**
 	 * Sends an event which won't receive any response. Will be sent via UDP
 	 * @param type a scoped type in the format `<scope>/<type>`
 	 * @param data random json object
 	 */
-	void send_event(const std::string& type, const boost::json::object& data = {});
+	void send_event(const std::string& type, const Object& data = {});
 
 	/**
 	 * Sends raw data via TCP socket.

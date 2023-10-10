@@ -131,7 +131,7 @@ void Connection::send_app_info() {
 
 	auto& app_info = this->client->app_info;
 
-	boost::json::object data = {
+	Object data = {
 		{"appVersion", app_info.version},
 		{"appName", app_info.name},
 		{"appPkgname", app_info.pkgname},
@@ -150,7 +150,7 @@ bool Connection::preprocess_pkg(NetPackage& pkg) {
 
 	if (pkg.type == "net/set_client_id") {
 		
-		string id = pkg.data["client_id"].as_string().c_str();
+		string id = pkg.data["client_id"];
 		cout << "SETTING UP UDP. CLIENT ID: " << id << endl;
 		this->setup_udp(id);
 		this->id = id;

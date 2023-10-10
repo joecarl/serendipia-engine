@@ -132,13 +132,13 @@ BaseClient::BaseClient(const AppInfo& _app_info, const std::string& res_dir) :
 
 	} else {
 
-		this->default_cfg["windowed"] = false;
+		this->default_cfg.set("windowed", false);
 
 	}
 
-	for (auto& item: this->default_cfg) {
-		if (!this->cfg.contains(item.key())) {
-			this->cfg[item.key()] = item.value();
+	for (auto& item: this->default_cfg.json()) {
+		if (!this->cfg.json().contains(item.key())) {
+			this->cfg.set(item.key(), item.value());
 		}
 	}
 
@@ -171,8 +171,8 @@ ALLEGRO_BITMAP* BaseClient::load_bitmap_resource(const std::string& filename) {
 
 void BaseClient::set_cfg_param(const std::string& key, const boost::json::value& val) {
 
-	this->cfg[key] = val;
-	file_put_contents(this->custom_cfg_filepath, boost::json::serialize(this->cfg));
+	this->cfg.set(key, val);
+	file_put_contents(this->custom_cfg_filepath, boost::json::serialize(this->cfg.json()));
 
 }
 

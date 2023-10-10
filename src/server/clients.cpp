@@ -26,11 +26,11 @@ Client::Client(BaseServer* _server, boost::asio::ip::tcp::socket&& _socket) :
 }
 
 
-bool Client::validate_app_info(boost::json::object& data) {
+bool Client::validate_app_info(const Object& data) {
 
-	auto app_version = data["appVersion"].get_string();
-	auto app_name = data["appName"].get_string();
-	auto app_pkgname = data["appPkgname"].get_string();
+	string app_version = data["appVersion"];
+	string app_name = data["appName"];
+	string app_pkgname = data["appPkgname"];
 	auto& app_info = this->server->app_info;
 
 	return 
@@ -55,7 +55,7 @@ bool Client::preprocess_pkg(NetPackage& pkg) {
 
 		this->app_validated = true;
 
-		boost::json::object data = {
+		Object data = {
 			{"client_id", this->id}
 		};
 

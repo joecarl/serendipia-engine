@@ -73,7 +73,7 @@ public:
 
 	virtual BaseGame* create_game() = 0;
 
-	virtual boost::json::object export_game(dp::BaseGame* game) = 0;
+	virtual Object export_game(dp::BaseGame* game) = 0;
 
 	void run();
 

@@ -20,13 +20,13 @@ namespace dp {
 
 std::string ConnectionHandler::pkg_to_raw_data(const NetPackage& pkg) {
 
-	 boost::json::object json_pkg = {
+	Object json_pkg = {
 		{"type", pkg.type},
-		{"data", pkg.data}
+		{"data", pkg.data.json()}
 	};
 	// TODO: add id?
 
-	return boost::json::serialize(json_pkg);
+	return json_pkg.serialize();
 
 }
 
@@ -66,15 +66,14 @@ void ConnectionHandler::close() {
 	this->next_req_id = 1;
 	//this->udp_channel->udp_controller;
 	this->socket->close();
-	boost::json::object dummy = {};
-	this->dispatch_listeners("net/disconnect", dummy);
+	this->dispatch_listeners("net/disconnect");
 }
 
 void ConnectionHandler::start_ping_thread() {
 
-	auto cb = [this] (const boost::json::object& obj) {
+	auto cb = [this] (const Object& obj) {
  
-		this->ping_ms = time_ms() - obj.at("ms").to_number<int64_t>();
+		this->ping_ms = time_ms() - obj.sget<int64_t>("ms");
 		//std::cout << "PING: " << this->ping_ms << "ms" << endl;
 
 	};
@@ -227,7 +226,7 @@ void ConnectionHandler::handle_qsent_content(const boost::system::error_code& er
 
 void ConnectionHandler::process_request(NetPackage& req) {
 
-	boost::json::object response_data;
+	Object response_data;
 	if (req.type == "net/ping") {
 		response_data = req.data;
 	} else {
@@ -235,22 +234,22 @@ void ConnectionHandler::process_request(NetPackage& req) {
 		return;
 	}
 
-	boost::json::object resp = {
+	Object resp = {
 		{"id", req.id},
-		{"data", response_data}
+		{"data", response_data.json()}
 	};
 
-	this->qsend(boost::json::serialize(resp));
+	this->qsend(resp.serialize());
 
 }
 
 
-void ConnectionHandler::handle_json_pkg(boost::json::object& obj) {
+void ConnectionHandler::handle_json_pkg(const Object& obj) {
 	//cout << pkg << endl;
 	NetPackage pkg = {
-		.id = obj.contains("id") ? obj["id"].to_number<uint64_t>() : 0,
-		.type = obj.contains("type") ? obj["type"].as_string().c_str() : "",
-		.data = obj["data"].as_object(),
+		.id = obj.sget<uint64_t>("id", 0),
+		.type = obj.sget<std::string>("type", ""),
+		.data = obj["data"],
 	};
 
 	bool ok = this->preprocess_pkg(pkg);
@@ -268,7 +267,7 @@ void ConnectionHandler::handle_json_pkg(boost::json::object& obj) {
 		
 			auto cb_it = this->requests_cbs.find(pkg.id);
 			if (cb_it != this->requests_cbs.end()) {
-				cb_it->second(obj["data"].as_object());
+				cb_it->second(obj["data"]);
 			}
 
 		}
@@ -277,7 +276,7 @@ void ConnectionHandler::handle_json_pkg(boost::json::object& obj) {
 
 		if (pkg.type == "net/binary_transfer") {
 
-			this->binary_pending_bytes = pkg.data["size"].to_number<uint64_t>();
+			this->binary_pending_bytes = pkg.data["size"];
 
 		}
 		
@@ -288,7 +287,7 @@ void ConnectionHandler::handle_json_pkg(boost::json::object& obj) {
 }
 
 
-void ConnectionHandler::dispatch_listeners(const std::string& type, boost::json::object& data) {
+void ConnectionHandler::dispatch_listeners(const std::string& type, const Object& data) {
 
 	for (size_t i = 0; i < this->nelhs.size(); i++) {
 		// Can't use range based loop here because the vector can be resized inside the loop
@@ -356,7 +355,7 @@ void ConnectionHandler::handle_qread_content(const boost::system::error_code& er
 
 		if (pt.is_object()) {
 
-			boost::json::object obj = pt.get_object();
+			Object obj = pt.get_object();
 			this->handle_json_pkg(obj);
 
 		} else {
@@ -371,29 +370,29 @@ void ConnectionHandler::handle_qread_content(const boost::system::error_code& er
 	//this->async_wait_for_data();
 }
 
-void ConnectionHandler::send_request(const std::string& type, const boost::json::object& data, const CallbackFnType& _cb) {
+void ConnectionHandler::send_request(const std::string& type, const Object& data, const CallbackFnType& _cb) {
 
 	uint64_t id = this->next_req_id++;
-	boost::json::object pkg = {
+	Object pkg = {
 		{"id", id},
 		{"type", type},
-		{"data", data}
+		{"data", data.json()}
 	};
 
 	this->requests_cbs[id] = _cb;
 
-	this->qsend(boost::json::serialize(pkg));
+	this->qsend(pkg.serialize());
 
 }
 
-void ConnectionHandler::send_event(const std::string& type, const boost::json::object& data) {
+void ConnectionHandler::send_event(const std::string& type, const Object& data) {
 	
-	boost::json::object pkg = {
+	Object pkg = {
 		{"type", type},
-		{"data", data}
+		{"data", data.json()}
 	};
 
-	this->qsend_udp(boost::json::serialize(pkg));
+	this->qsend_udp(pkg.serialize());
 
 }
 

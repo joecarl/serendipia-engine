@@ -2,6 +2,7 @@
 #define NETEVENTSLISTENERSHANDLER_H
 
 #include <dp/serendipia.h>
+#include <dp/object.h>
 #include <boost/json.hpp>
 #include <unordered_map>
 #include <memory>
@@ -13,7 +14,7 @@ namespace dp::client {
 
 namespace dp {
 
-typedef std::function<void(boost::json::object& obj)> CallbackFnType;
+typedef std::function<void(const Object& obj)> CallbackFnType;
 
 typedef struct {
 	std::string type;

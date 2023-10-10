@@ -60,9 +60,9 @@ class BaseClient {
 
 	ALLEGRO_BITMAP* kb_icon;
 
-	boost::json::object cfg;
+	Object cfg;
 
-	boost::json::object default_cfg;
+	Object default_cfg;
 
 	float fps = 0;
 
@@ -130,9 +130,9 @@ public:
 
 	Connection& get_io_client() { return this->connection; }
 
-	boost::json::object& get_cfg() { return this->cfg; }
+	Object& get_cfg() { return this->cfg; }
 
-	boost::json::object& get_default_cfg() { return this->default_cfg; }
+	Object& get_default_cfg() { return this->default_cfg; }
 
 	AllegroHandler& get_allegro_hnd() { return this->allegro_hnd; }
 
