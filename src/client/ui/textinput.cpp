@@ -163,7 +163,7 @@ std::string TextInput::get_value() {
 }
 
 
-void TextInput::set_from_json_value(boost::json::value& val) {
+void TextInput::set_from_json_value(const boost::json::value& val) {
 	
 	if (val.is_string()) {
 		this->reset();

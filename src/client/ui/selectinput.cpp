@@ -90,7 +90,7 @@ bool SelectInput::get_value_as_bool() {
 }
 
 
-void SelectInput::set_from_json_value(boost::json::value& val) {
+void SelectInput::set_from_json_value(const boost::json::value& val) {
 
 	std::string v;
 	if (val.is_string()) {

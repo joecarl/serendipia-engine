@@ -50,7 +50,7 @@ public:
 
 	std::string get_validation_msg();
 	
-	void set_from_json_value(boost::json::value& val);
+	void set_from_json_value(const boost::json::value& val);
 
 	boost::json::value get_json_value();
 
