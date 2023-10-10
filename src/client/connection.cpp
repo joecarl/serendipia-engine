@@ -21,6 +21,7 @@ namespace dp::client {
 Connection::Connection(BaseClient* _client) : 
 	ConnectionHandler(),
 	client(_client),
+	resolver(io_context),
 	udp_controller(nullptr)
 {
 	
@@ -41,42 +42,59 @@ void Connection::connect(const string& host, unsigned short port) {
 	}
 
 	this->connection_state = CONNECTION_STATE_CONNECTING;
+	this->socket.reset(new tcp::socket(this->io_context));
+
+	auto connect_handler = [this, host] (const boost::system::error_code& error) {
+		if (error) {
+			throw std::runtime_error(error.message());
+		}
+		this->connection_state = CONNECTION_STATE_CONNECTED;
+		this->current_host = host;
+
+		cout << "Connected to " << this->socket->remote_endpoint() << " !" << endl;
+
+		this->start_ping_thread();
+		this->start_receive();
+		this->send_app_info();
+	};
+
+	auto resolve_handler = [this, connect_handler] (const boost::system::error_code& error, tcp::resolver::results_type results) {
+		if (error) {
+			throw std::runtime_error(error.message());
+		}
+		// results is an iterator with all resolutions found,
+		// we will just select the first one:
+		tcp::endpoint endpoint = results->endpoint();
+				
+		cout << "Trying " << endpoint << " ..." << endl;
+		//this->socket->connect(endpoint);
+		this->socket->async_connect(endpoint, connect_handler);		
+	};
+
+	// Resolve query
+	cout << "Resolving " << host << " ..." << endl;
+	resolver.async_resolve(host, std::to_string(port), resolve_handler);
 	
+	this->start_context_thread();
+
+}
+
+
+void Connection::start_context_thread() {
+	
+	if (this->io_context_running) return;
+
 	boost::thread([=] {
-
 		try {
-
-			// Create a resolver
-			tcp::resolver resolver(this->io_context);
-
-			// Resolve query
-			cout << "Resolving " << host << " ..." << endl;
-			auto it = resolver.resolve(host, std::to_string(port));
-
-			// resolver.resolve returns an iterator with all resolutions found,
-			// we will just select the first one:
-			tcp::endpoint endpoint = it->endpoint();
-					
-			cout << "Trying " << endpoint << " ..." << endl;
-
-			this->socket.connect(endpoint);
-			this->connection_state = CONNECTION_STATE_CONNECTED;
-			this->current_host = host;
-
-			cout << "Connected to " << this->socket.remote_endpoint() << " !" << endl;
-
-			this->start_ping_thread();
-			this->start_receive();
-			this->send_app_info();
+			cout << "this->io_context.run();" << endl;
+			this->io_context_running = true;
 			this->io_context.run();
-
 		} catch (std::exception &e) {
-
 			cout << "Error occurred[C]: " << e.what() << endl;
 			this->connection_state = CONNECTION_STATE_DISCONNECTED;
-
 		}
-
+		this->io_context.restart();
+		this->io_context_running = false;
 	});
 
 }
@@ -84,12 +102,12 @@ void Connection::connect(const string& host, unsigned short port) {
 
 void Connection::setup_udp(string& local_id) {
 
-	auto tcp_local_ep = this->socket.local_endpoint();
-	auto tcp_remote_ep = this->socket.remote_endpoint();
+	auto tcp_local_ep = this->socket->local_endpoint();
+	auto tcp_remote_ep = this->socket->remote_endpoint();
 
 	udp::endpoint local_endpoint(tcp_local_ep.address(), tcp_local_ep.port());
 	udp::endpoint remote_endpoint(tcp_remote_ep.address(), tcp_remote_ep.port());
-	this->udp_controller = new UdpController(this->socket.get_executor(), local_endpoint, local_id);
+	this->udp_controller = new UdpController(this->socket->get_executor(), local_endpoint, local_id);
 	
 	auto udp_ch = this->udp_controller->create_channel(remote_endpoint, "SERVER").get();
 	udp_ch->send_handshake();

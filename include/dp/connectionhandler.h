@@ -63,6 +63,8 @@ class ConnectionHandler {
 
 	bool receiving = false;
 
+	bool _remove_nelh(NetEventsListenersHandler* nelh);
+
 	void handle_qsent_content(const boost::system::error_code& error, std::size_t bytes_transferred);
 
 	void handle_qread_content(const boost::system::error_code& error, std::size_t bytes_transferred);
@@ -83,16 +85,18 @@ protected:
 
 	virtual bool validate_app_info(boost::json::object& data) { return true; }
 
+	void dispatch_listeners(const std::string& type, boost::json::object& data);
+	// TODO: void dispatch_listeners(const std::string& type, const boost::json::object& data = {});
+
 	std::string id;
 
-	// this context should not be used when the connection handler is initializad with another socket
-	boost::asio::io_context io_context;
-
-	boost::asio::ip::tcp::socket socket;
+	std::unique_ptr<boost::asio::ip::tcp::socket> socket;
 
 	ConnState connection_state = CONNECTION_STATE_DISCONNECTED;
 
 	void start_ping_thread();
+
+	void close();
 
 public:
 
@@ -154,8 +158,6 @@ public:
 	int64_t get_ping_ms() { return this->ping_ms; }
 
 	NetEventsListenersHandler* create_nelh();
-
-	bool remove_nelh(NetEventsListenersHandler* nelh);
 
 	bool is_connected() { return this->connection_state >= CONNECTION_STATE_CONNECTED; }
 

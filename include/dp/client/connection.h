@@ -25,7 +25,11 @@ class Connection : public ConnectionHandler {
 
 	BaseClient* client;
 
-	//boost::asio::io_context io_context;
+	bool io_context_running = false;
+
+	boost::asio::io_context io_context;
+	
+	boost::asio::ip::tcp::resolver resolver;
 
 	UdpController* udp_controller;
 	
@@ -68,6 +72,11 @@ public:
 	 * `CONNECTION_STATE_CONNECTED_FULL`.
 	 */
 	const std::string& get_local_id();
+
+	/**
+	 * Starts the io_context run function in a separate thread
+	 */
+	void start_context_thread();
 
 };
 

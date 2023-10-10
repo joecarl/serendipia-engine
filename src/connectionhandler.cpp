@@ -6,6 +6,7 @@
 #include <iostream>
 #include <chrono>
 #include <thread>
+#include <algorithm>
 
 namespace asio = boost::asio;
 using boost::asio::ip::udp;
@@ -29,40 +30,58 @@ std::string ConnectionHandler::pkg_to_raw_data(const NetPackage& pkg) {
 
 }
 
-ConnectionHandler::ConnectionHandler(/*boost::asio::io_context& io_context*/) : 
+ConnectionHandler::ConnectionHandler() : 
 	udp_channel(nullptr),
-	io_context(),
-	socket(io_context)
+	socket(nullptr)
 {
 
 }
 
-ConnectionHandler::ConnectionHandler(boost::asio::ip::tcp::socket&& _socket) :
-	socket(std::move(_socket))
+ConnectionHandler::ConnectionHandler(tcp::socket&& _socket) :
+	socket(std::make_unique<tcp::socket>(std::move(_socket)))
 {
 	// TODO: check socket state to set connection_state ?
 	this->connection_state = CONNECTION_STATE_CONNECTED;
 }
 
 ConnectionHandler::~ConnectionHandler() {
-
-	this->socket.cancel();
-	this->socket.close();
+	if (this->socket) {
+		this->socket->close();
+	}
 }
 
 
+void ConnectionHandler::close() {
+	this->connection_state = CONNECTION_STATE_DISCONNECTED;
+	this->receiving = false;
+	this->busy = false;
+	this->id = "";
+	//this->binary_data = {};
+	//this->binary_pending_bytes = 0;
+	//this->
+	//this->udp_channel->close();
+	this->udp_channel->on_handshake_done = nullptr;
+	this->udp_channel->process_pkg_fn = nullptr;
+	this->udp_channel = nullptr;
+	this->next_req_id = 1;
+	//this->udp_channel->udp_controller;
+	this->socket->close();
+	boost::json::object dummy = {};
+	this->dispatch_listeners("net/disconnect", dummy);
+}
+
 void ConnectionHandler::start_ping_thread() {
 
-	auto cb = [this] (boost::json::object& obj) {
+	auto cb = [this] (const boost::json::object& obj) {
  
-		this->ping_ms = time_ms() - obj["ms"].to_number<int64_t>();
+		this->ping_ms = time_ms() - obj.at("ms").to_number<int64_t>();
 		//std::cout << "PING: " << this->ping_ms << "ms" << endl;
 
 	};
 
 	boost::thread([this, cb] {
 
-		while (true) {
+		while (this->connection_state >= CONNECTION_STATE_CONNECTED) {
 			this->send_request("net/ping", { {"ms", time_ms()} }, cb);
 			std::this_thread::sleep_for(std::chrono::seconds(1));
 		}
@@ -141,7 +160,7 @@ void ConnectionHandler::_send(const std::string& pkg) {
 		sendbuf->clear();// TODO: will it be freed?
 	};
 
-	asio::async_write(socket, asio::buffer(*sendbuf), handler);
+	asio::async_write(*socket, asio::buffer(*sendbuf), handler);
 	
 } 
 
@@ -178,7 +197,7 @@ void ConnectionHandler::qread() {
 		this->handle_qread_content(error, bytes_transferred);
 	};
 
-	socket.async_read_some(asio::buffer(read_buffer, MAX_BUFFER_SIZE), handler);
+	socket->async_read_some(asio::buffer(read_buffer, MAX_BUFFER_SIZE), handler);
 
 }
 
@@ -186,7 +205,7 @@ void ConnectionHandler::handle_qsent_content(const boost::system::error_code& er
 
 	if (error) {
 		cout << "Error occurred (SEND)[" << this->id << "]: " << error.message() << endl;
-		this->connection_state = CONNECTION_STATE_DISCONNECTED;
+		this->close();
 		return;
 	}
 
@@ -262,13 +281,35 @@ void ConnectionHandler::handle_json_pkg(boost::json::object& obj) {
 
 		}
 		
-		for (auto& nelh: this->nelhs) {
-			const auto& listeners = (*nelh).get_listeners(pkg.type);
-			for (auto& l: listeners) {
-				l->cb(pkg.data);
+		this->dispatch_listeners(pkg.type, pkg.data);
+
+	}
+
+}
+
+
+void ConnectionHandler::dispatch_listeners(const std::string& type, boost::json::object& data) {
+
+	for (size_t i = 0; i < this->nelhs.size(); i++) {
+		// Can't use range based loop here because the vector can be resized inside the loop
+		auto nelh_ptr = nelhs[i].get();
+		const auto& listeners = nelh_ptr->get_listeners(type);
+		for (auto& l: listeners) {
+			l->cb(data);
+			if (nelh_ptr->is_disposed()) {
+				break;
 			}
 		}
+	}
 
+	std::vector<NetEventsListenersHandler*> nelhs_to_remove;
+	for (auto& nelh: this->nelhs) {
+		if (nelh->is_disposed()) {
+			nelhs_to_remove.push_back(nelh.get());
+		}
+	}
+	for (auto nelh_ptr: nelhs_to_remove) {
+		this->_remove_nelh(nelh_ptr);
 	}
 
 }
@@ -278,7 +319,7 @@ void ConnectionHandler::handle_qread_content(const boost::system::error_code& er
 
 	if (error) {
 		cout << "Error occurred (READ)[" << this->id << "]: " << error.message() << endl;
-		this->connection_state = CONNECTION_STATE_DISCONNECTED;
+		this->close();
 		return;
 	}
 
@@ -368,7 +409,7 @@ NetEventsListenersHandler* ConnectionHandler::create_nelh() {
 }
 
 //#include <algorithm>
-bool ConnectionHandler::remove_nelh(NetEventsListenersHandler* nelh) {
+bool ConnectionHandler::_remove_nelh(NetEventsListenersHandler* nelh) {
 
 	auto iter = this->nelhs.begin();
 

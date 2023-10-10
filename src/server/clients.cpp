@@ -49,7 +49,7 @@ bool Client::preprocess_pkg(NetPackage& pkg) {
 			//throw runtime_error("App info does not match");
 			cerr << "App info does not match: " << pkg.data << endl;
 			//this->dead = true;
-			this->socket.close();
+			this->socket->close();
 			return false;
 		}
 
