@@ -13,7 +13,7 @@ namespace dp::client {
 
 namespace dp {
 
-typedef std::function<void(boost::json::object& pt)> CallbackFnType;
+typedef std::function<void(boost::json::object& obj)> CallbackFnType;
 
 typedef struct {
 	std::string type;
@@ -23,6 +23,8 @@ typedef struct {
 class NetEventsListenersHandler {
 
 	uint64_t next_listener_id = 1;
+
+	bool disposed = false;
 	
 	std::unordered_map<uint64_t, NetEventListener> listeners;
 
@@ -31,6 +33,8 @@ public:
 	bool enabled = true;
 
 	NetEventsListenersHandler();
+	
+	~NetEventsListenersHandler() { }
 
 	/**
 	 * Registers a callback function which will be called when an event with
@@ -46,6 +50,10 @@ public:
 
 	
 	std::vector<const NetEventListener*> get_listeners(const std::string& type);
+
+	void dispose() { this->disposed = true; this->enabled = false; }
+
+	bool is_disposed() { return this->disposed; }
 
 };
 
