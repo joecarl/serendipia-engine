@@ -41,7 +41,7 @@ NetGroup::NetGroup(Connection* _net, string _id, string _owner_id, boost::json::
 
 NetGroup::~NetGroup() {
 	
-	this->net->remove_nelh(this->nelh);
+	this->nelh->dispose();
 
 }
 
