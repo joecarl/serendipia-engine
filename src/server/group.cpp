@@ -34,6 +34,31 @@ void Group::send_member_update(const GroupPlayer& m) {
 }
 
 
+void Group::drop_member(const std::string& id) {
+	
+	this->players.erase(id);
+	auto pos = std::find(this->sorted_members_ids.begin(), this->sorted_members_ids.end(), id);
+	if (pos != this->sorted_members_ids.end()) {
+		this->sorted_members_ids.erase(pos, pos + 1);
+	}
+
+	cout << "Player with key " << id << " dropped from group" << endl;
+
+	if (this->players.size() == 0) {
+		return;
+	}
+
+	this->owner_id = this->players.begin()->second.client->get_id();
+
+	this->broadcast_event("group/member_leave", { 
+		{"client_id", id},
+		{"new_owner_id", this->owner_id} 
+	});
+
+
+}
+
+
 void Group::add_client(Client* cl) {
 
 	if (this->owner_id == "") {
@@ -76,12 +101,10 @@ void Group::add_client(Client* cl) {
 
 	auto nelh = cl->get_nelh();
 
-	nelh->add_event_listener("connection/drop", [this, player_idx] (boost::json::object& data) {
+	nelh->add_event_listener("net/disconnect", [this, player_idx] (boost::json::object& data) {
 
 		//cout << "onDrop event callback!!" << endl;
-		this->players.erase(player_idx);
-		// TODO: also remove from sorted_members_ids
-		cout << "Player with key " << player_idx << " dropped from group" << endl;
+		this->drop_member(player_idx);
 		
 	});
 

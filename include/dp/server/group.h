@@ -75,6 +75,8 @@ public:
 	void new_game();
 
 	void add_client(Client* cl);
+	
+	void drop_member(const std::string& id);
 
 	void broadcast(const std::string& pkg);
 
