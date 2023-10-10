@@ -154,12 +154,12 @@ void Group::add_client(Client* cl) {
 		*/
 
 		//cout << "TICK: " << this->game->tick << " | IDX: " << this->players[player_idx].idx << endl;
-		//data["tick"] = this->game->tick + 0; //TODO: auto calc tick delay based on clients connection?
 		Object evt = data;
+		evt.set("tick", this->game->tick + 0); //TODO: auto calc tick delay based on clients connection?
 		evt.set("player_key", this->players[player_idx].idx); //player_idx;
 		this->evt_queue.push(evt);
 
-		//this->broadcast_event("game/event", data);
+		this->broadcast_event("game/event", evt);
 
 	});
 
@@ -242,37 +242,43 @@ void Group::broadcast_event(const std::string& type, const Object& data) {
 void Group::game_main_loop() {
 
 	//cout << "game_main_loop" << endl;
+	bool must_broadcast_sync = false;
 
 	while (this->evt_queue.size() > 0) {
 
 		auto evt = this->evt_queue.front();
-
-
-		evt.set("tick", this->game->tick);
-		this->broadcast_event("game/event", evt);
-
-
 		uint64_t evt_tick = evt["tick"];
 
-		if (evt_tick == this->game->tick) {
-
-			this->process_game_event(evt);
-			this->evt_queue.pop();
-
-		} else if (evt_tick < this->game->tick) {
-
-			cerr << evt_tick << " < " << this->game->tick << " !!!!!!!!" << endl;
-			throw std::runtime_error("Evento perdido");
-
-		} else {
-			
+		if (evt_tick > this->game->tick) {
 			break;
-
 		}
+
+		if (evt_tick < this->game->tick) {
+			// Esto puede sueceder ya que el socket y group no corren en el mismo hilo
+			cerr << evt_tick << " < " << this->game->tick << " --> WILL BROADCAST RESYNC !!!!!!!!" << endl;
+			must_broadcast_sync = true;
+			//evt.set("tick", this->game->tick); //innecesario
+			//this->broadcast_event("game/event", evt);
+			//throw std::runtime_error("Evento perdido");
+		}
+
+		this->process_game_event(evt);
+		this->evt_queue.pop();
 
 	}
 
 	this->game->process_tick();
+
+	if (must_broadcast_sync) {
+		
+		Object o = {
+			{"type", "sync"},
+			{"gamevars", this->server->export_game(this->game).json()}
+		};
+
+		cerr << "!! BROADCAST RESYNC " << o << endl;
+		this->broadcast_event("game/event", o);
+	}
 
 	if (this->game->is_finished()) {
 		return;
