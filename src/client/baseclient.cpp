@@ -138,7 +138,7 @@ BaseClient::BaseClient(const AppInfo& _app_info, const std::string& res_dir) :
 
 	for (auto& item: this->default_cfg.json()) {
 		if (!this->cfg.json().contains(item.key())) {
-			this->cfg.set(item.key(), item.value());
+			this->cfg.set(std::string{item.key()}, item.value());
 		}
 	}
 
