@@ -30,6 +30,7 @@ Connection::Connection(BaseClient* _client) :
 
 Connection::~Connection() {
 
+	this->ping_timer.cancel();
 	this->io_context.stop();
 	delete this->udp_controller;
 
@@ -185,7 +186,6 @@ void Connection::start_ping_task() {
 	});
 
 }
-
 
 
 } // namespace dp::client

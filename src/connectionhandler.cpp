@@ -60,9 +60,11 @@ void ConnectionHandler::close() {
 	//this->binary_pending_bytes = 0;
 	//this->
 	//this->udp_channel->close();
-	this->udp_channel->on_handshake_done = nullptr;
-	this->udp_channel->process_pkg_fn = nullptr;
-	this->udp_channel = nullptr;
+	if (this->udp_channel) {
+		this->udp_channel->on_handshake_done = nullptr;
+		this->udp_channel->process_pkg_fn = nullptr;
+		this->udp_channel = nullptr;
+	}
 	this->next_req_id = 1;
 	//this->udp_channel->udp_controller;
 	if (this->socket) {
