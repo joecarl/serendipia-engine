@@ -1,5 +1,4 @@
 #include <dp/client/baseclient.h>
-#include <dp/client/mediatools.h>
 #include <dp/client/logging.h>
 #include <dp/utils.h>
 
@@ -91,6 +90,7 @@ BaseClient::BaseClient(const AppInfo& _app_info, const std::string& res_dir) :
 	resources_dir(res_dir),
 	//custom_cfg_filepath(this->get_storage_dir() + "/cfg.json"),
 	allegro_hnd(this),
+	audio_hnd(this),
 	touch_keys(this),
 	kb_touch_keys(this),
 	active_touch_keys(&touch_keys),
@@ -288,6 +288,7 @@ void BaseClient::run() {
 		else if (event.type == ALLEGRO_EVENT_TIMER) {
 
 			this->run_tick();
+			this->audio_hnd.prune();
 
 			if (!drawing_halted && al_is_event_queue_empty(evt_queue)) {
 

@@ -5,6 +5,7 @@
 #include <dp/client/connection.h>
 #include <dp/client/netgroupshandler.h>
 #include <dp/client/allegrohandler.h>
+#include <dp/client/audiohandler.h>
 #include <dp/client/stage.h>
 #include <dp/client/ui/touchkeys.h>
 #include <dp/client/ui/textinput.h>
@@ -36,6 +37,8 @@ class BaseClient {
 	std::string custom_cfg_filepath;
 
 	AllegroHandler allegro_hnd;
+
+	AudioHandler audio_hnd;
 
 	TouchKeys touch_keys;
 
@@ -145,6 +148,8 @@ public:
 	uint16_t get_res_y() { return this->res_y; }
 
 	ALLEGRO_FONT* get_font() { return this->font; }
+
+	AudioHandler& get_audio_hnd() { return this->audio_hnd; }
 
 	//NetGroupsHandler& get_groups_handler() { return this->groups_handler; }
 
