@@ -57,8 +57,6 @@ class ConnectionHandler {
 
 	std::unordered_map<uint64_t, CallbackFnType> requests_cbs;
 
-	int64_t ping_ms = 0;
-
 	std::vector<std::unique_ptr<NetEventsListenersHandler>> nelhs;
 
 	bool receiving = false;
@@ -92,8 +90,6 @@ protected:
 	std::unique_ptr<boost::asio::ip::tcp::socket> socket;
 
 	ConnState connection_state = CONNECTION_STATE_DISCONNECTED;
-
-	void start_ping_thread();
 
 	void close();
 
@@ -150,11 +146,6 @@ public:
 	 * Starts reading and processing incoming data
 	 */
 	void start_receive();
-
-	/**
-	 * Obtains the current ping in milliseconds.
-	 */
-	int64_t get_ping_ms() { return this->ping_ms; }
 
 	NetEventsListenersHandler* create_nelh();
 

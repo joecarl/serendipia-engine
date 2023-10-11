@@ -31,15 +31,21 @@ class Connection : public ConnectionHandler {
 	
 	boost::asio::ip::tcp::resolver resolver;
 
+	boost::asio::steady_timer ping_timer;
+
 	UdpController* udp_controller;
 	
 	std::string current_host;
+
+	int64_t ping_ms = 0;
 
 	void setup_udp(std::string& local_id);
 
 	void send_app_info();
 
 	bool preprocess_pkg(NetPackage& pkg);
+	
+	void start_ping_task();
 
 public:
 
@@ -77,6 +83,11 @@ public:
 	 * Starts the io_context run function in a separate thread
 	 */
 	void start_context_thread();
+
+	/**
+	 * Obtains the current ping in milliseconds.
+	 */
+	int64_t get_ping_ms() { return this->ping_ms; }
 
 };
 

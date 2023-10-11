@@ -45,9 +45,9 @@ ConnectionHandler::ConnectionHandler(tcp::socket&& _socket) :
 }
 
 ConnectionHandler::~ConnectionHandler() {
-	if (this->socket) {
-		this->socket->close();
-	}
+	
+	this->close();
+	
 }
 
 
@@ -65,28 +65,10 @@ void ConnectionHandler::close() {
 	this->udp_channel = nullptr;
 	this->next_req_id = 1;
 	//this->udp_channel->udp_controller;
-	this->socket->close();
+	if (this->socket) {
+		this->socket->close();
+	}
 	this->dispatch_listeners("net/disconnect");
-}
-
-void ConnectionHandler::start_ping_thread() {
-
-	auto cb = [this] (const Object& obj) {
- 
-		this->ping_ms = time_ms() - obj.sget<int64_t>("ms");
-		//std::cout << "PING: " << this->ping_ms << "ms" << endl;
-
-	};
-
-	boost::thread([this, cb] {
-
-		while (this->connection_state >= CONNECTION_STATE_CONNECTED) {
-			this->send_request("net/ping", { {"ms", time_ms()} }, cb);
-			std::this_thread::sleep_for(std::chrono::seconds(1));
-		}
-
-	});
-
 }
 
 
@@ -107,14 +89,11 @@ void ConnectionHandler::set_udp_channel(UdpChannelController* ch) {
 }
 
 
-
 ConnState ConnectionHandler::get_state() {
 
 	return this->connection_state;
 
 }
-
-
 
 
 void ConnectionHandler::qsend_udp(const std::string& pkg) {

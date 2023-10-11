@@ -22,6 +22,7 @@ Connection::Connection(BaseClient* _client) :
 	ConnectionHandler(),
 	client(_client),
 	resolver(io_context),
+	ping_timer(io_context),
 	udp_controller(nullptr)
 {
 	
@@ -53,7 +54,7 @@ void Connection::connect(const string& host, unsigned short port) {
 
 		cout << "Connected to " << this->socket->remote_endpoint() << " !" << endl;
 
-		this->start_ping_thread();
+		this->start_ping_task();
 		this->start_receive();
 		this->send_app_info();
 	};
@@ -158,6 +159,30 @@ bool Connection::preprocess_pkg(NetPackage& pkg) {
 	}
 
 	return true;
+
+}
+
+
+void Connection::start_ping_task() {
+	
+	auto cb = [this] (const Object& obj) {
+ 
+		this->ping_ms = time_ms() - obj.sget<int64_t>("ms");
+		//std::cout << "PING: " << this->ping_ms << "ms" << endl;
+
+	};
+
+	ping_timer.expires_after(boost::asio::chrono::seconds(1));
+	ping_timer.async_wait([this, cb] (const boost::system::error_code& error) {
+
+		if (this->connection_state < CONNECTION_STATE_CONNECTED) {
+			return;
+		}
+		
+		this->send_request("net/ping", { {"ms", time_ms()} }, cb);
+		this->start_ping_task();
+		
+	});
 
 }
 
