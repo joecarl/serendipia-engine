@@ -1,5 +1,4 @@
 #include <dp/client/baseclient.h>
-#include <dp/client/mediatools.h>
 #include <dp/utils.h>
 
 #include <allegro5/allegro.h>
@@ -73,7 +72,7 @@ void AllegroHandler::initialize_resources() {
 	if (!al_install_audio()) {
 		throw std::runtime_error("could not init sound!");
 	}
-	if (!al_reserve_samples(1)) {
+	if (!al_reserve_samples(10)) {
 		throw std::runtime_error("could not reserve samples!"); 
 	}
 	
@@ -300,6 +299,20 @@ void AllegroHandler::cleanup() {
 	al_destroy_timer(this->timer);
 	al_destroy_display(this->display);
 	al_destroy_event_queue(this->event_queue);
+
+}
+
+ALLEGRO_BITMAP* load_bitmap(const std::string& filename) {
+
+	std::cout << "Loading bitmap: " << filename << std::endl;
+
+	ALLEGRO_BITMAP* sprite = al_load_bitmap(filename.c_str());
+	if (!sprite) {
+		throw std::runtime_error("error loading bitmap");
+	}
+	al_convert_mask_to_alpha(sprite, ALPHA_COLOR);
+
+	return sprite;
 
 }
 

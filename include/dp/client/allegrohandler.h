@@ -4,6 +4,14 @@
 #include <allegro5/allegro.h>
 #include <allegro5/allegro_font.h>
 
+#define ALPHA_COLOR al_map_rgb(255, 0, 255)
+
+#define WHITE al_map_rgb(255, 255, 255)
+#define RED al_map_rgb(255, 0, 0)
+
+#define CGA_PINK al_map_rgb(255, 85, 255)
+#define CGA_BLUE al_map_rgb(85, 255, 255)
+
 namespace dp::client {
 
 class BaseClient;
@@ -82,6 +90,8 @@ public:
 	ALLEGRO_EVENT_QUEUE* get_event_queue() { return this->event_queue; }
 
 };
+
+ALLEGRO_BITMAP* load_bitmap(const std::string& filename);
 
 } // namespace dp::client
 

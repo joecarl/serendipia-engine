@@ -1,7 +1,6 @@
 
 #include <dp/client/ui/touchkeys.h>
 #include <dp/client/baseclient.h>
-#include <dp/client/mediatools.h>
 
 #include <allegro5/allegro.h>
 #include <allegro5/allegro_primitives.h>

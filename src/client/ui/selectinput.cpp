@@ -1,5 +1,4 @@
 #include <dp/client/ui/selectinput.h>
-#include <dp/client/mediatools.h>
 #include <dp/client/baseclient.h>
 
 #include <allegro5/allegro_primitives.h>

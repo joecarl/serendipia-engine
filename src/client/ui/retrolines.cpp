@@ -1,5 +1,5 @@
 #include <dp/client/ui/retrolines.h>
-#include <dp/client/mediatools.h>
+#include <dp/client/allegrohandler.h>
 #include <allegro5/allegro.h>
 #include <allegro5/allegro_primitives.h>
 #include <cmath>
