@@ -53,7 +53,7 @@ class ConnectionHandler {
 
 	std::vector<uint8_t> binary_data;
 
-	uint64_t binary_pending_bytes = 0;
+	size_t binary_pending_bytes = 0;
 
 	std::unordered_map<uint64_t, CallbackFnType> requests_cbs;
 
