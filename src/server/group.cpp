@@ -8,6 +8,16 @@ using std::endl;
 
 namespace dp::server {
 
+size_t index_of(const std::vector<std::string>& vec, const std::string& val) {
+
+	for (size_t idx = 0; idx < vec.size(); idx++) {
+		if (vec[idx] == val) return idx;
+	}
+	
+	return -1;
+
+}
+
 boost::json::object member_to_json(const GroupPlayer& pl) {
 	return {
 		{"client_id", pl.client->get_id()},
@@ -69,50 +79,36 @@ void Group::add_client(Client* cl) {
 		return;
 	}
 
-	// TODO: see idx todo in group.h
-	size_t i = 0;
-	bool found = false;
-	while (!found) {
-		found = true;
-		for (auto& pl: this->players) {
-			if (pl.second.idx == i) {
-				i++;
-				found = false;
-				break;
-			}
-		}
-	}
 
-	std::string player_idx = cl->get_id();
+	std::string client_id = cl->get_id();
 
 	GroupPlayer pl = {
 		.client = cl,
 		.ready = false,
-		.idx = i,
 	};
 
 	this->broadcast_event("group/member_join", { 
 		{"member", member_to_json(pl)} 
 	});
 
-	this->players[player_idx] = pl;
-	this->sorted_members_ids.push_back(player_idx);
-	cout << "Client " << player_idx << " joined group " << this->get_id() << endl;
+	this->players[client_id] = pl;
+	this->sorted_members_ids.push_back(client_id);
+	cout << "Client " << client_id << " joined group " << this->get_id() << endl;
 
 	auto nelh = cl->get_nelh();
 
-	nelh->add_event_listener("net/disconnect", [this, player_idx] (const Object& data) {
+	nelh->add_event_listener("net/disconnect", [this, client_id] (const Object& data) {
 
 		//cout << "onDrop event callback!!" << endl;
-		this->drop_member(player_idx);
+		this->drop_member(client_id);
 		
 	});
 
-	nelh->add_event_listener("group/set_ready_state", [this, player_idx] (const Object& data) {
+	nelh->add_event_listener("group/set_ready_state", [this, client_id] (const Object& data) {
 
 		cout << "Player ready_state changed!!" << endl;
-		this->players[player_idx].ready = data["state"];
-		this->send_member_update(this->players[player_idx]);
+		this->players[client_id].ready = data["state"];
+		this->send_member_update(this->players[client_id]);
 
 		if (!this->is_full()) {
 			return;
@@ -130,7 +126,7 @@ void Group::add_client(Client* cl) {
 
 	});
 
-	nelh->add_event_listener("game/desync", [this, player_idx] (const Object& data) {
+	nelh->add_event_listener("game/desync", [this, client_id] (const Object& data) {
 
 		Object o = {
 			{"type", "sync"},
@@ -138,11 +134,11 @@ void Group::add_client(Client* cl) {
 		};
 
 		cerr << "!! RESYNC " << o << endl;
-		this->players[player_idx].client->send_event("game/event", o);
+		this->players[client_id].client->send_event("game/event", o);
 
 	});
 
-	nelh->add_event_listener("game/event", [this, player_idx] (const Object& data) {
+	nelh->add_event_listener("game/event", [this, client_id] (const Object& data) {
 		/*
 		uint64_t orig_tick = data["tick"].to_number<uint64_t>();
 		uint64_t tick_diff = 0; 
@@ -153,10 +149,10 @@ void Group::add_client(Client* cl) {
 		}
 		*/
 
-		//cout << "TICK: " << this->game->tick << " | IDX: " << this->players[player_idx].idx << endl;
+		//cout << "TICK: " << this->game->tick << " | CID: " << client_id << endl;
 		Object evt = data;
 		evt.set("tick", this->game->tick + 0); //TODO: auto calc tick delay based on clients connection?
-		evt.set("player_key", this->players[player_idx].idx); //player_idx;
+		evt.set("player_key", index_of(this->sorted_members_ids, client_id));
 		this->evt_queue.push(evt);
 
 		this->broadcast_event("game/event", evt);

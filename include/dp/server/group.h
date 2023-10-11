@@ -32,9 +32,6 @@ typedef struct {
 
 	Object cfg;
 
-	// TODO: (pensar) en lugar de este idx usar una funcion register_player en la clase BaseGame? que reciba un key string y lo asigne a un player y devuelva el indice asignado?
-	uint64_t idx;
-
 } GroupPlayer;
 
 class Group {
