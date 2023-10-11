@@ -2,6 +2,7 @@
 
 #include <allegro5/allegro.h>
 #include <allegro5/allegro_primitives.h>
+#include <boost/thread.hpp>
 #include <cmath>
 #include <string>
 #include <cstdlib>
@@ -17,8 +18,9 @@ int16_t audio[FREC_MUESTREO * 5];//un audio de 5 seg máx...
 
 void play_sound(int nota, float time, int octava) {
 
-	float frec= 440.0 * pow(2.0, (float) (octava - 3.0 + (nota - 10.0) / 12.0));
-	int ciclos = frec * time;//obtenemos un numero de ciclos y lo guardamos como valor entero
+	float frec = 440.0 * pow(2.0, (float) (octava - 3.0 + (nota - 10.0) / 12.0));
+	// Obtenemos un numero de ciclos y lo guardamos como valor entero
+	int ciclos = frec * time;
 	time = float(ciclos) / frec;
 	unsigned int samples = FREC_MUESTREO * time / 1000.0;
 	
@@ -37,22 +39,25 @@ void play_audio(float volumen, ALLEGRO_PLAYMODE mode) {
 	al_stop_samples();
 	ALLEGRO_SAMPLE *beep = nullptr;
 
-	auto buff = (uint16_t*)al_malloc(last_pos*sizeof(uint16_t));
+	auto buff = (uint16_t*)al_malloc(last_pos * sizeof(uint16_t));
 	if (volumen > 1) volumen = 1;
 	else if (volumen < 0) volumen = 0;
 	for (int i = 0; i < last_pos; i++) {
-		buff[i] = audio[i] * volumen;//*sin(3.140*i/last_pos);
+		buff[i] = audio[i] * volumen;//*sin(3.140 * i / last_pos);
 	}
 
 	beep = al_create_sample(buff, last_pos, FREC_MUESTREO, ALLEGRO_AUDIO_DEPTH_INT16, ALLEGRO_CHANNEL_CONF_1, true);
    
 	if (beep != nullptr) {
-		//printf("construyendo sample...\n");
-		
-		al_play_sample(beep, 1.0, 0, 1.0, mode, nullptr);
-		//al_rest(last_pos/FREC_MUESTREO);
-		//al_stop_sample(&sampleid);
-		//al_destroy_sample(beep);
+		double duration = (double)last_pos / (double)FREC_MUESTREO;
+		boost::thread([beep, mode, duration, buff] {
+			ALLEGRO_SAMPLE_ID sampleid;
+			al_play_sample(beep, 1.0, 0, 1.0, mode, &sampleid);
+			al_rest(duration);
+			al_stop_sample(&sampleid);
+			al_destroy_sample(beep);
+		});
+	
 	}
 
 	last_pos = 0;
