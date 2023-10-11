@@ -109,7 +109,7 @@ void Connection::setup_udp(string& local_id) {
 
 	udp::endpoint local_endpoint(tcp_local_ep.address(), tcp_local_ep.port());
 	udp::endpoint remote_endpoint(tcp_remote_ep.address(), tcp_remote_ep.port());
-	this->udp_controller = new UdpController(this->socket->get_executor(), local_endpoint, local_id);
+	this->udp_controller = new UdpController(this->io_context.get_executor(), local_endpoint, local_id);
 	
 	auto udp_ch = this->udp_controller->create_channel(remote_endpoint, "SERVER").get();
 	udp_ch->send_handshake();
