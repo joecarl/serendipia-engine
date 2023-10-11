@@ -29,6 +29,8 @@ class Connection : public ConnectionHandler {
 
 	boost::asio::io_context io_context;
 	
+	boost::thread io_context_th;
+	
 	boost::asio::ip::tcp::resolver resolver;
 
 	boost::asio::steady_timer ping_timer;

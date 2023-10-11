@@ -30,8 +30,13 @@ Connection::Connection(BaseClient* _client) :
 
 Connection::~Connection() {
 
+	// The socket needs to be destroyed before the io_context (omitting this 
+	// line caused segfaults, maybe having the socket as a prop of this class
+	// would be a better design)
+	this->socket.reset();
 	this->ping_timer.cancel();
 	this->io_context.stop();
+	this->io_context_th.join();
 	delete this->udp_controller;
 
 }
@@ -86,7 +91,7 @@ void Connection::start_context_thread() {
 	
 	if (this->io_context_running) return;
 
-	boost::thread([=] {
+	this->io_context_th = boost::thread([=] {
 		try {
 			cout << "this->io_context.run();" << endl;
 			this->io_context_running = true;

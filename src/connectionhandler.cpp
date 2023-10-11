@@ -46,31 +46,31 @@ ConnectionHandler::ConnectionHandler(tcp::socket&& _socket) :
 
 ConnectionHandler::~ConnectionHandler() {
 	
-	this->close();
+	// Remove udp channel?
 	
 }
 
 
 void ConnectionHandler::close() {
+
 	this->connection_state = CONNECTION_STATE_DISCONNECTED;
 	this->receiving = false;
 	this->busy = false;
 	this->id = "";
 	//this->binary_data = {};
 	//this->binary_pending_bytes = 0;
-	//this->
-	//this->udp_channel->close();
 	if (this->udp_channel) {
 		this->udp_channel->on_handshake_done = nullptr;
 		this->udp_channel->process_pkg_fn = nullptr;
 		this->udp_channel = nullptr;
+		//this->udp_channel->udp_controller->remove_channel(this->udp_channel);
 	}
 	this->next_req_id = 1;
-	//this->udp_channel->udp_controller;
 	if (this->socket) {
-		this->socket->close();
+		this->socket->cancel();
 	}
 	this->dispatch_listeners("net/disconnect");
+
 }
 
 
