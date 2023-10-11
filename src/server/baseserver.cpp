@@ -84,6 +84,7 @@ void BaseServer::on_new_connection(tcp::socket& socket) {
 	
 	cl->get_nelh()->add_event_listener("client/login", [this, cl] (const Object& data) {
 		cl->cfg = data["cfg"];
+		cout << "Client login: " << cl->cfg << endl;
 		this->assign_client_to_group(cl);
 	});
 	
