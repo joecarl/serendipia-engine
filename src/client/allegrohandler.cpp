@@ -20,6 +20,13 @@ using std::endl;
 
 namespace dp::client {
 
+#ifdef _WIN32
+#include <direct.h>
+static int mkdir(const char* p, int d) {
+	return _mkdir(p);
+}
+#endif
+
 static void _mkdir(const char *dir) {
 	char tmp[256];
 	char *p = NULL;
