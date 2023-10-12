@@ -64,7 +64,7 @@ void AudioHandler::play_sample(const AudioSampleRes& res, double volume, ALLEGRO
 	}
 
 	double duration = 0.1 + res.total_duration / 1000.0; // Add 0.1s guard so audio is not unexpectedly stopped
-	std::cout << "Playing sample for " << duration << "seconds" << std::endl;
+	//std::cout << "Playing sample for " << duration << "seconds" << std::endl;
 	ALLEGRO_SAMPLE_ID sampleid;
 	bool played = al_play_sample(beep, volume, 0, 1.0, mode, &sampleid);
 
@@ -98,7 +98,7 @@ void AudioHandler::prune(bool hard) {
 		al_stop_sample(&active_sample.sampleid);
 		al_destroy_sample(active_sample.beep);
 		delete[] active_sample.buff;
-		std::cout << "Sample destroyed" << std::endl;
+		//std::cout << "Sample destroyed" << std::endl;
 		to_erase.push_back(active_sample_it.first);
 
 	}
