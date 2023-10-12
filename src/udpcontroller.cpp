@@ -47,6 +47,7 @@ void UdpController::start_receive() {
 	//cout << "!! WAITING FOR NEXT UDP PKG IN BACKGROUND... " << endl;
 	auto handler = [&, recv_buff, _remote_endpoint] (const boost::system::error_code& error, size_t bytes_transferred) {
 
+		//cout << "UDP RECV [" << bytes_transferred << "B]: " << string(recv_buff, std::min((size_t)80, bytes_transferred)) << endl;
 		string dgram = string(recv_buff, bytes_transferred);
 		//cout << "<- UDP | " << *_remote_endpoint << " | " << bytes_transferred << "B" << endl;
 
@@ -257,14 +258,23 @@ uint64_t UdpChannelController::get_new_pkg_id() {
 void UdpChannelController::_send(const string& data, uint64_t id, uint64_t count) {
 
 	udp::socket& sock = this->udp_controller->get_socket();
-
 	auto sendbuf = make_shared<string>(data);
-
 	auto t = make_shared<boost::asio::steady_timer>(sock.get_executor());
 
 	auto check = [this, id, sendbuf, count, t] (const boost::system::error_code& error) {
 
-		//comprobar si se ha recibido acuse de recibo en el otro listener y en caso negativo enviar de nuevo!
+		if (error) {
+			cerr << "Error checking UDP pkg: " << error.message() << endl;
+		}
+
+		if (count >= 5) {
+			if (count == 5) {
+				cout << "!!!!!! PROBLEMS SENDING: " << *sendbuf << endl;
+			}
+			cout << "-> UDP | " << this->remote_endpoint << " | !! T" << count << endl;
+		} 
+
+		// Comprobar si se ha recibido acuse de recibo en el otro listener y en caso negativo enviar de nuevo!
 		for (auto & k_id: this->unconfirmed_pkgs) {
 			if (id == k_id) {
 				if (count > 100) {
