@@ -22,6 +22,8 @@ class BaseGame {
 public:
 
 	bool finished = false;
+	
+	bool paused = false;
 
 	uint64_t tick = 0;
 
