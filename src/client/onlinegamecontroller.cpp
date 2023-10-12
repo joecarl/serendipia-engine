@@ -12,7 +12,7 @@ void OnlineGameController::push_event(const Object &evt) {
 	if (evt_type == "sync") {
 		this->sync_data = evt;
 		return;
-	} 
+	}
 
 	this->evt_queue.push(evt);
 	
@@ -21,7 +21,6 @@ void OnlineGameController::push_event(const Object &evt) {
 void OnlineGameController::process_event(const Object &evt) {
 
 	//cout << "Processing evt" << evt << endl;
-
 	auto evt_type = evt.sget<std::string>("type");
 		
 	if (evt_type == "set_control_state") {
@@ -48,7 +47,7 @@ void OnlineGameController::setup(BaseGame *game) {
 	
 	this->game = game;
 	
-	//vaciamos la cola de eventos
+	// Vaciamos la cola de eventos
 	std::queue<dp::Object> empty;
 	std::swap(this->evt_queue, empty);
 
