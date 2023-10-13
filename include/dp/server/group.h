@@ -52,6 +52,8 @@ class Group {
 
 	std::queue<Object> evt_queue;
 
+	uint64_t next_evt_id;
+
 	boost::asio::io_context *io = nullptr;
 
 	boost::asio::steady_timer *t;

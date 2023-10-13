@@ -137,6 +137,7 @@ void Group::add_client(Client* cl) {
 		Object o = {
 			{"type", "sync"},
 			{"evt_queue", evt_queue_arr},
+			{"next_evt_id", this->next_evt_id},
 			{"gamevars", this->server->export_game(this->game).json()}
 		};
 
@@ -160,6 +161,7 @@ void Group::add_client(Client* cl) {
 		Object evt = data;
 		evt.set("tick", this->game->tick + 0); //TODO: auto calc tick delay based on clients connection?
 		evt.set("player_key", index_of(this->sorted_members_ids, client_id));
+		evt.set("evt_id", this->next_evt_id++);
 		this->evt_queue.push(evt);
 
 		this->broadcast_event("game/event", evt);
@@ -301,6 +303,7 @@ void Group::new_game() {
 	// Vaciamos la cola de eventos
 	std::queue<Object> empty;
 	std::swap(this->evt_queue, empty);
+	this->next_evt_id = 1;
 
 	this->game = this->server->create_game();
 	//cout << "New game created, tick: " << this->game->tick << endl;
