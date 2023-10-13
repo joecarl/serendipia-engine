@@ -128,8 +128,15 @@ void Group::add_client(Client* cl) {
 
 	nelh->add_event_listener("game/desync", [this, client_id] (const Object& data) {
 
+		boost::json::array evt_queue_arr;
+		std::queue evt_queue_copy = this->evt_queue;
+		while (evt_queue_copy.size() > 0) {
+			evt_queue_arr.push_back(evt_queue_copy.front().json());
+			evt_queue_copy.pop();
+		}
 		Object o = {
 			{"type", "sync"},
+			{"evt_queue", evt_queue_arr},
 			{"gamevars", this->server->export_game(this->game).json()}
 		};
 
