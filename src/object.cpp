@@ -29,6 +29,9 @@ Object& Object::operator=(boost::json::object& _json_obj) {
 
 ObjectProperty Object::operator[](const char* key) const {
 	auto iter = this->json_obj.find(key);
+	if (iter == this->json_obj.end()) {
+		throw std::logic_error("Key " + std::string(key) + " doesn't exist");
+	}
 	return ObjectProperty(iter->value());
 }
 
