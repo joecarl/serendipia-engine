@@ -7,6 +7,8 @@ namespace dp::client {
 
 void OnlineGameController::push_event(const Object &evt) {
 
+	std::lock_guard<std::mutex> guard(this->evt_queue_mutex);
+	
 	auto evt_type = evt.sget<std::string>("type");
 
 	if (evt_type == "sync") {
@@ -58,15 +60,38 @@ void OnlineGameController::process_sync_data() {
 
 	const Object& gamevars = this->sync_data["gamevars"];
 	uint64_t tick = gamevars["tick"];
+	uint64_t curr_tick = this->game->tick;
+	
+	if (tick > this->game->tick && !this->sync_postponed) {
+		cout << "Posponiendo sync... " << (tick - this->game->tick) << endl;
+		this->sync_postponed = true;
+		return;
+	}
 
-	// Eliminamos todos los eventos que ya no haya que procesar
-	while (this->evt_queue.size() > 0) {
-		auto& next_evt = this->evt_queue.front();
-		uint64_t next_evt_tick = next_evt["tick"];
-		if (next_evt_tick >= tick) {
+	// Hacemos swap de los eventos recibidos y los locales los guardamos en cola auxiliar
+	boost::json::array evt_q = this->sync_data["evt_queue"];
+	uint64_t next_evt_id = this->sync_data["next_evt_id"];
+	std::queue<dp::Object> aux_evt_q;
+	for (auto& evt: evt_q) {
+		//cout << "ESTABLECIENDO: " << evt << endl;
+		aux_evt_q.push(evt);
+	}
+	std::swap(this->evt_queue, aux_evt_q);
+	// Eliminamos los eventos residuales de la cola auxiliar
+	while (aux_evt_q.size() > 0) {
+		uint64_t front_evt_id = aux_evt_q.front()["evt_id"];
+		if (front_evt_id < next_evt_id) {
+			//cout << "ELIMINANDO: " << aux_evt_q.front() << endl;
+			aux_evt_q.pop();
+		} else {
 			break;
 		}
-		this->evt_queue.pop();
+	}
+	// Añadimos los eventos de la cola auxiliar (si quedase alguno) a la cola real
+	while (aux_evt_q.size() > 0) {
+		//cout << "RECOMPONIENDO: " << aux_evt_q.front() << endl;
+		this->evt_queue.push(aux_evt_q.front());
+		aux_evt_q.pop();
 	}
 
 	//cerr << "!! SYNCING: " << this->sync_data << endl;
@@ -80,15 +105,22 @@ void OnlineGameController::process_sync_data() {
 	}
 
 	this->sync_data = {};
+	this->sync_postponed = false;
+
+	while (this->game->tick < curr_tick) {
+		cout << "NOTICE: FLUSHIN TICK! (" << this->game->tick << ")" << endl;
+		this->process_events();
+		this->game->process_tick();
+	}
+
+	if (this->game->tick != curr_tick) {
+		cerr << "WARN: ticks dont match: " << this->game->tick << " != " << curr_tick << endl;
+	}
 
 }
 
 
-void OnlineGameController::on_tick() {
-
-	if (!this->sync_data.json().empty()) {
-		this->process_sync_data();
-	}
+void OnlineGameController::process_events() {
 
 	while (this->evt_queue.size() > 0) {
 
@@ -103,9 +135,10 @@ void OnlineGameController::on_tick() {
 		} else if (evt_tick < this->game->tick) {
 
 			cerr << "DESYNC! evt_tick: " << evt_tick << " | game_tick: " << this->game->tick << endl;
+			//cerr << "EVT: " << evt << endl;
 			this->evt_queue.pop();
 		
-			throw std::runtime_error("Evento perdido");
+			throw std::runtime_error("Evento anterior no procesado");
 
 		} else {
 			
@@ -114,6 +147,19 @@ void OnlineGameController::on_tick() {
 		}
 
 	}
+
+}
+
+void OnlineGameController::on_tick() {
+
+	std::lock_guard<std::mutex> guard(this->evt_queue_mutex);
+
+	if (!this->sync_data.json().empty()) {
+		this->process_sync_data();
+	}
+
+	this->process_events();
+
 }
 
 } // namespace dp::client
