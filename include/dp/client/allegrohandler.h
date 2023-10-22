@@ -34,6 +34,8 @@ class AllegroHandler {
 	 * Main buffer where all non-UI components will render
 	 */
 	ALLEGRO_BITMAP *buffer;
+	
+	ALLEGRO_BITMAP *auxb;
 
 	/**
 	 * Secondary buffer mainly used to render UI components

@@ -222,13 +222,23 @@ void AllegroHandler::fit_display() {
 	this->scale_x = (window_width - scale_w) / 2;
 	this->scale_y = (window_height - scale_h) / 2;
 
+	if (scaled >= 2.0) {
+		if (auxb) {
+			al_destroy_bitmap(auxb);
+		}
+		int scale_int = (int)scaled;
+		auto flags = al_get_new_bitmap_flags();
+		al_set_new_bitmap_flags(ALLEGRO_MAG_LINEAR | ALLEGRO_MIN_LINEAR);
+		auxb = al_create_bitmap(screen_width * scale_int, screen_height * scale_int);
+		al_set_new_bitmap_flags(flags);
+	}
+
 	if (this->sec_buffer) {
 		al_destroy_bitmap(this->sec_buffer);
 	}
 
 	this->sec_buffer = al_create_bitmap(window_width / this->scaled, window_height / this->scaled);
 	
-
 }
 
 
@@ -256,8 +266,14 @@ void AllegroHandler::prepare_main_surface() {
 
 void AllegroHandler::draw_main_surface() {
 
+	al_set_target_bitmap(auxb);
+	al_clear_to_color(al_map_rgb(0, 0, 0));
+	al_draw_scaled_bitmap(buffer, 0, 0, screen_width, screen_height, 0, 0, al_get_bitmap_width(auxb), al_get_bitmap_height(auxb), 0);
+
 	al_set_target_backbuffer(display);
-	al_draw_scaled_bitmap(buffer, 0, 0, screen_width, screen_height, scale_x, scale_y, scale_w, scale_h, 0);
+
+	//al_draw_scaled_bitmap(buffer, 0, 0, screen_width, screen_height, scale_x, scale_y, scale_w, scale_h, 0);
+	al_draw_scaled_bitmap(auxb, 0, 0, al_get_bitmap_width(auxb), al_get_bitmap_height(auxb), scale_x, scale_y, scale_w, scale_h, 0);
 
 }
 
