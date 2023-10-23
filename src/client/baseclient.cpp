@@ -232,6 +232,7 @@ void BaseClient::run() {
 	ALLEGRO_EVENT event;
 
 	bool drawing_halted = false;
+	bool redraw = false;
 	
 	do {
 
@@ -264,38 +265,31 @@ void BaseClient::run() {
 
 			this->on_event(event);
 		}
-
 		else if (event.type == ALLEGRO_EVENT_DISPLAY_CLOSE) {
 			break;
 		}
-
 		else if (event.type == ALLEGRO_EVENT_DISPLAY_HALT_DRAWING) {
 			drawing_halted = true;
 			al_acknowledge_drawing_halt(event.display.source);
 		}
-
 		else if (event.type == ALLEGRO_EVENT_DISPLAY_RESUME_DRAWING) {
 			drawing_halted = false;
 			al_acknowledge_drawing_resume(event.display.source);
 		}
-
 		else if (event.type == ALLEGRO_EVENT_DISPLAY_RESIZE) {
 			al_acknowledge_resize(event.display.source);
 			this->allegro_hnd.fit_display();
 			this->active_touch_keys->re_arrange();
 		}
-
 		else if (event.type == ALLEGRO_EVENT_TIMER) {
-
 			this->run_tick();
 			this->audio_hnd.prune();
+			redraw = true;
+		}
 
-			if (!drawing_halted && al_is_event_queue_empty(evt_queue)) {
-
-				this->draw();
-
-			}
-
+		if (redraw && !drawing_halted && al_is_event_queue_empty(evt_queue)) {
+			redraw = false;
+			this->draw();
 		}
 
 	} while (!this->finish);
