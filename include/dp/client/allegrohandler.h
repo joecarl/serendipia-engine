@@ -42,6 +42,8 @@ class AllegroHandler {
 	 */
 	ALLEGRO_BITMAP *sec_buffer;
 
+	ALLEGRO_BITMAP *sec_auxb;
+
 	ALLEGRO_EVENT_QUEUE *event_queue;
 
 	/**

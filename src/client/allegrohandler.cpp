@@ -31,7 +31,7 @@ static void _mkdir(const char *dir) {
 	char *p = NULL;
 	size_t len;
 
-	snprintf(tmp, sizeof(tmp),"%s",dir);
+	snprintf(tmp, sizeof(tmp), "%s", dir);
 	len = strlen(tmp);
 	if (tmp[len - 1] == '/')
 		tmp[len - 1] = 0;
@@ -237,8 +237,21 @@ void AllegroHandler::fit_display() {
 		al_destroy_bitmap(this->sec_buffer);
 	}
 
-	this->sec_buffer = al_create_bitmap(window_width / this->scaled, window_height / this->scaled);
+	const float sec_buffer_w = window_width / this->scaled;
+	const float sec_buffer_h = window_height / this->scaled;
+
+	this->sec_buffer = al_create_bitmap(sec_buffer_w, sec_buffer_h);
 	
+	if (scaled >= 2.0) {
+		if (sec_auxb) {
+			al_destroy_bitmap(sec_auxb);
+		}
+		int scale_int = (int)scaled;
+		auto flags = al_get_new_bitmap_flags();
+		al_set_new_bitmap_flags(ALLEGRO_MAG_LINEAR | ALLEGRO_MIN_LINEAR);
+		sec_auxb = al_create_bitmap(sec_buffer_w * scale_int, sec_buffer_h * scale_int);
+		al_set_new_bitmap_flags(flags);
+	}
 }
 
 
@@ -285,8 +298,21 @@ void AllegroHandler::prepare_sec_surface() {
 
 void AllegroHandler::draw_sec_surface() {
 
+	al_set_target_bitmap(sec_auxb);
+	al_clear_to_color(al_map_rgba(0, 0, 0, 1));
+	al_draw_scaled_bitmap(sec_buffer, 0, 0, window_width / this->scaled, window_height / this->scaled, 0, 0, al_get_bitmap_width(sec_auxb), al_get_bitmap_height(sec_auxb), 0);
+
 	al_set_target_backbuffer(display);
-	al_draw_scaled_bitmap(sec_buffer, 0, 0, window_width / this->scaled, window_height / this->scaled, 0, 0, this->window_width, this->window_height, 0);
+	// al_draw_scaled_bitmap(
+	// 	sec_buffer, 
+	// 	0, 0, window_width / this->scaled, window_height / this->scaled, 
+	// 	0, 0, this->window_width, this->window_height, 
+	//	0);
+	al_draw_scaled_bitmap(
+		sec_auxb, 
+		0, 0, al_get_bitmap_width(sec_auxb), al_get_bitmap_height(sec_auxb), 
+		0, 0, this->window_width, this->window_height, 
+		0);
 
 }
 
