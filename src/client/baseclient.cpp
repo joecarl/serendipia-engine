@@ -232,11 +232,16 @@ void BaseClient::run() {
 	ALLEGRO_EVENT event;
 
 	bool drawing_halted = false;
-	bool redraw = false;
+	bool draw = false;
 	
 	do {
 
 		auto evt_queue = this->allegro_hnd.get_event_queue();
+
+		if (draw && !drawing_halted && al_is_event_queue_empty(evt_queue)) {
+			this->draw();
+			draw = false;
+		}
 
 		al_wait_for_event(evt_queue, &event);
 
@@ -284,12 +289,7 @@ void BaseClient::run() {
 		else if (event.type == ALLEGRO_EVENT_TIMER) {
 			this->run_tick();
 			this->audio_hnd.prune();
-			redraw = true;
-		}
-
-		if (redraw && !drawing_halted && al_is_event_queue_empty(evt_queue)) {
-			redraw = false;
-			this->draw();
+			draw = true;
 		}
 
 	} while (!this->finish);
@@ -374,7 +374,7 @@ void BaseClient::draw() {
 	this->allegro_hnd.prepare_sec_surface();
 	
 	
-	#ifdef ALLEGRO_ANDROID
+	#ifdef __ANDROID__
 	//this->kb_touch_keys.draw();
 	if (this->active_touch_keys != nullptr) {
 		this->active_touch_keys->draw();
