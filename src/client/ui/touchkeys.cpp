@@ -125,6 +125,11 @@ void Button::draw_special_symbol() {
 
 void Button::draw() {
 
+	if (draw_fn != nullptr) {
+		draw_fn(*this);
+		return;
+	}
+
 	if (text.empty()) {
 		return;
 	}
@@ -199,11 +204,13 @@ void TouchKeys::draw() {
 }
 
 
-void TouchKeys::add_button(unsigned int keycode, string txt) {
+Button* TouchKeys::add_button(unsigned int keycode, string txt) {
 	
 	Button btn(this, keycode, txt);
 
 	buttons.push_back(std::move(btn));
+
+	return &(buttons.back());
 
 }
 

@@ -41,6 +41,8 @@ class Button {
 
 public:
 
+	std::function<void(Button&)> draw_fn = nullptr;
+
 	Button(TouchKeys* t_keys, unsigned int keycode, std::string txt);
 
 	void set_dimensions(int x, int y, int w, int h);
@@ -58,6 +60,16 @@ public:
 	bool in_area(int px, int py);
 
 	void draw();
+
+	int get_x() { return x; }
+
+	int get_y() { return y; }
+
+	int get_w() { return w; }
+
+	int get_h() { return h; }
+
+	bool get_pressed() { return pressed; }
 
 };
 
@@ -133,7 +145,9 @@ public:
 
 	void clear_buttons();
 
-	void add_button(unsigned int keycode, std::string txt);
+	Button* add_button(unsigned int keycode, std::string txt);
+
+	const std::vector<Button>& get_buttons() { return buttons; }
 
 	void layout_buttons(std::vector<TouchKeysRow>&& layout);
 
